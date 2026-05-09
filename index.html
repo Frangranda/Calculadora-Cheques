@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Simulador de Venta de Cheques — Balanz vs Banco</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Outfit:wght@700;800&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --balanz: #1D3557; --balanz-light: #457B9D;
+  --banco: #8B2635;
+  --win: #2D6A4F; --win-bg: #D8F3DC;
+  --bg: #F7F5F0; --card: #FFFFFF;
+  --text: #1A1A2E; --muted: #6B6B7A; --border: #E0DDD6;
+  --shadow: 0 2px 16px rgba(29,53,87,0.08);
+}
+body { font-family: 'Syne', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; padding-bottom: 4rem; }
+
+header {
+  background: linear-gradient(135deg, #0D1E35 0%, #1A3A5C 60%, #1D5080 100%);
+  color: white;
+  padding: 0;
+  position: relative;
+  overflow: hidden;
+  min-height: 90px;
+}
+header::before { content:''; position:absolute; top:-60px; right:-60px; width:220px; height:220px; border-radius:50%; background:rgba(168,218,220,0.08); pointer-events:none; }
+header::after  { content:''; position:absolute; bottom:-40px; left:-40px; width:160px; height:160px; border-radius:50%; background:rgba(168,218,220,0.05); pointer-events:none; }
+.header-inner {
+  display: grid;
+  grid-template-columns: 140px 1fr 140px;
+  align-items: center;
+  padding: 1.2rem 2rem;
+  position: relative;
+  z-index: 1;
+  gap: 1rem;
+}
+.header-logo {
+  justify-self: start;
+}
+.header-logo .hl-name {
+  font-family: 'Outfit', sans-serif;
+  font-size: 1.1rem;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: #fff;
+  display: block;
+  line-height: 1;
+}
+.header-logo .hl-divider {
+  width: 100%;
+  height: 1px;
+  background: rgba(255,255,255,0.45);
+  margin: 0.22rem 0;
+}
+.header-logo .hl-sub {
+  font-family: 'Outfit', sans-serif;
+  font-size: 0.5rem;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.6);
+  display: block;
+}
+.header-center { text-align: center; }
+header h1 { font-size:1rem; font-weight:800; letter-spacing:-0.3px; line-height:1.2; white-space:nowrap; }
+header p  { font-size:0.72rem; opacity:0.65; margin-top:0.3rem; font-family:'DM Mono',monospace; white-space:nowrap; }
+
+.main { max-width: 980px; margin: 0 auto; padding: 2rem 1.5rem; }
+
+.panel {
+  background: var(--card); border-radius: 16px; border: 1px solid var(--border);
+  padding: 1.5rem; margin-bottom: 1.25rem; box-shadow: var(--shadow);
+}
+.panel-title {
+  font-size: 0.72rem; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase;
+  color: var(--muted); margin-bottom: 1.25rem; display: flex; align-items: center; gap: 0.5rem;
+}
+.dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+.dot-b { background:var(--balanz); } .dot-bc { background:var(--banco); }
+
+/* grid de inputs */
+.ig { display:grid; grid-template-columns:repeat(auto-fit, minmax(175px,1fr)); gap:1rem; }
+.ig-3 { display:grid; grid-template-columns:repeat(3,1fr); gap:1rem; }
+.ig-2 { display:grid; grid-template-columns:1fr 1fr; gap:1rem; }
+
+.field label { display:block; font-size:0.75rem; font-weight:600; color:var(--muted); margin-bottom:0.35rem; letter-spacing:0.3px; }
+.field input {
+  width:100%; padding:0.55rem 0.75rem; border:1.5px solid var(--border); border-radius:8px;
+  font-family:'DM Mono',monospace; font-size:0.9rem; color:var(--text);
+  background:var(--bg); transition:border-color 0.15s; outline:none;
+}
+.field input:focus { border-color:var(--balanz-light); background:white; }
+
+/* toggle group */
+.tg { display:flex; border:1.5px solid var(--border); border-radius:8px; overflow:hidden; }
+.tg button {
+  flex:1; padding:0.48rem 0.3rem; border:none; background:var(--bg);
+  font-family:'Syne',sans-serif; font-size:0.75rem; font-weight:600;
+  color:var(--muted); cursor:pointer; transition:background 0.15s, color 0.15s;
+  border-right:1px solid var(--border);
+}
+.tg button:last-child { border-right:none; }
+.tg button.ab  { background:var(--balanz); color:white; }
+.tg button.abc { background:var(--banco);  color:white; }
+
+/* acred chip */
+.acred-chip {
+  display:inline-block; margin-top:0.45rem;
+  font-family:'DM Mono',monospace; font-size:0.8rem; font-weight:500;
+  color:var(--balanz); letter-spacing:0.2px;
+}
+
+.two-col { display:grid; grid-template-columns:1fr 1fr; gap:1.25rem; margin-bottom:1.25rem; }
+
+/* resultado cards */
+.res-card {
+  background:var(--card); border-radius:16px; border:2px solid var(--border);
+  padding:1.4rem; box-shadow:var(--shadow); transition:border-color 0.2s;
+}
+.res-card.balanz-card { border-color:rgba(29,53,87,0.2); }
+.res-card.banco-card  { border-color:rgba(139,38,53,0.2); }
+.res-card.winner { border-color:var(--win); border-width:2.5px; }
+
+.rch { display:flex; align-items:center; gap:0.6rem; margin-bottom:1rem; flex-wrap:wrap; }
+.badge { font-size:0.68rem; font-weight:700; letter-spacing:1px; text-transform:uppercase; padding:0.22rem 0.65rem; border-radius:20px; }
+.badge-b { background:var(--balanz); color:white; } .badge-bc { background:var(--banco); color:white; }
+.badge-sub { font-size:0.7rem; color:var(--muted); font-family:'DM Mono',monospace; }
+.win-badge { font-size:0.65rem; font-weight:700; letter-spacing:0.8px; text-transform:uppercase; padding:0.2rem 0.6rem; border-radius:20px; background:var(--win-bg); color:var(--win); margin-left:auto; }
+
+.neto-lbl { font-size:0.7rem; font-weight:600; color:var(--muted); letter-spacing:0.5px; text-transform:uppercase; margin-bottom:0.2rem; }
+.neto-val { font-family:'DM Mono',monospace; font-size:1.75rem; font-weight:500; letter-spacing:-1px; line-height:1; margin-bottom:0.85rem; }
+.balanz-card .neto-val { color:var(--balanz); } .banco-card .neto-val { color:var(--banco); }
+
+.drows { border-top:1px solid var(--border); padding-top:0.8rem; }
+.dr { display:flex; justify-content:space-between; align-items:center; padding:0.27rem 0; font-size:0.79rem; border-bottom:1px solid var(--bg); }
+.dr:last-child { border-bottom:none; }
+.dl { color:var(--muted); } 
+.dv { font-family:'DM Mono',monospace; font-size:0.77rem; font-weight:500; }
+.dv.neg { color:#B84C58; }
+
+/* verdict */
+.verdict { border-radius:14px; padding:1.1rem 1.4rem; display:flex; align-items:center; gap:0.9rem; margin-bottom:1.25rem; font-weight:600; font-size:0.9rem; }
+.verdict.bw  { background:rgba(29,53,87,0.07);   border:1.5px solid rgba(29,53,87,0.25);   color:var(--balanz); }
+.verdict.bcw { background:rgba(139,38,53,0.07);  border:1.5px solid rgba(139,38,53,0.25);  color:var(--banco); }
+.verdict.tie { background:rgba(107,107,122,0.07); border:1.5px solid rgba(107,107,122,0.25); color:var(--muted); }
+.verdict-icon { font-size:1.6rem; line-height:1; flex-shrink:0; }
+.verdict-text small { display:block; font-weight:400; font-family:'DM Mono',monospace; font-size:0.72rem; opacity:0.75; margin-top:0.2rem; }
+
+/* bars */
+.bar-row { display:flex; align-items:center; gap:0.75rem; margin-bottom:0.8rem; }
+.bar-row:last-child { margin-bottom:0; }
+.bar-lbl { font-size:0.72rem; font-weight:700; letter-spacing:0.5px; text-transform:uppercase; min-width:55px; }
+.bar-lbl.bl { color:var(--balanz); } .bar-lbl.bc { color:var(--banco); }
+.bar-track { flex:1; height:10px; border-radius:999px; background:var(--bg); overflow:hidden; }
+.bar-fill { height:100%; border-radius:999px; transition:width 0.4s cubic-bezier(0.4,0,0.2,1); }
+.bar-fill.bl { background:var(--balanz); } .bar-fill.bc { background:var(--banco); }
+.bar-amt { font-family:'DM Mono',monospace; font-size:0.78rem; font-weight:500; min-width:115px; text-align:right; }
+
+/* pequeño input de porcentaje dentro de filas banco */
+.pct {
+  width:46px; padding:0.12rem 0.3rem; border:1px solid var(--border); border-radius:5px;
+  font-family:'DM Mono',monospace; font-size:0.73rem; background:var(--bg);
+  text-align:right; outline:none; color:var(--text);
+}
+.pct:focus { border-color:var(--balanz-light); background:white; }
+
+.brow { display:flex; align-items:center; justify-content:space-between; font-size:0.79rem; padding:0.3rem 0; border-bottom:1px solid var(--bg); }
+.brow:last-child { border-bottom:none; }
+.brow .bl2 { color:var(--muted); }
+.brow-right { display:flex; align-items:center; gap:0.35rem; }
+
+@media(max-width:700px){
+  .two-col { grid-template-columns:1fr; }
+  .ig-5 { grid-template-columns:repeat(2,1fr); }
+  .neto-val { font-size:1.4rem; }
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-inner">
+    <div class="header-logo">
+      <span class="hl-name">BALANZ</span>
+      <div class="hl-divider"></div>
+      <span class="hl-sub">Nº1 en inversiones</span>
+    </div>
+    <div class="header-center">
+      <h1>Simulador de Venta de Cheques</h1>
+      <p>Mercado de Capitales (Balanz) vs. Descuento Bancario</p>
+    </div>
+    <div></div>
+  </div>
+</header>
+
+<div class="main">
+
+<!-- ===== DATOS BASE ===== -->
+<div class="panel">
+  <div class="panel-title">Datos de la operación</div>
+
+  <!-- Fila 1: monto + fechas -->
+  <div class="ig-3" style="margin-bottom:1rem">
+    <div class="field">
+      <label>Monto del Cheque ($)</label>
+      <input type="number" id="monto" value="32750000" step="1000">
+    </div>
+    <div class="field">
+      <label>Fecha de Liquidación</label>
+      <input type="date" id="fechaLiq" value="2026-04-06">
+    </div>
+    <div class="field">
+      <label>Fecha de Vencimiento</label>
+      <input type="date" id="fechaVenc" value="2026-08-06">
+    </div>
+  </div>
+
+  <!-- Separador -->
+  <div style="border-top:1px solid var(--border); margin-bottom:1rem"></div>
+
+  <!-- Fila 2: acreditación + plazo calculado -->
+  <div class="ig-2">
+    <div class="field">
+      <label>Fecha de Acreditación</label>
+      <div class="tg" id="tgAcred" style="margin-bottom:0.5rem">
+        <button class="ab" data-v="0" onclick="setT(0)">T+0</button>
+        <button            data-v="1" onclick="setT(1)">T+1</button>
+        <button            data-v="2" onclick="setT(2)">T+2</button>
+      </div>
+      <div style="display:flex;align-items:center;gap:0.4rem">
+        <span style="font-size:0.72rem;color:var(--muted);font-weight:600">Fecha:</span>
+        <span class="acred-chip" id="fechaAcredChip">—</span>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Plazo (días corridos)</label>
+      <div style="
+        padding:0.55rem 0.75rem; border:1.5px solid var(--border); border-radius:8px;
+        background:var(--bg); font-family:'DM Mono',monospace; font-size:1.1rem;
+        font-weight:500; color:var(--text); letter-spacing:-0.5px;
+        display:flex; align-items:baseline; gap:0.4rem;
+      ">
+        <span id="plazoChip">—</span>
+        <span style="font-size:0.75rem;color:var(--muted);font-weight:400">días</span>
+      </div>
+      <p style="font-size:0.67rem;color:var(--muted);margin-top:0.35rem">Entre fecha de liquidación y vencimiento</p>
+    </div>
+  </div>
+</div>
+
+<!-- ===== DOS PANELES DE PARÁMETROS ===== -->
+<div class="two-col">
+
+  <!-- BALANZ -->
+  <div class="panel" style="margin-bottom:0">
+    <div class="panel-title"><span class="dot dot-b"></span>Balanz — Mercado de Capitales</div>
+
+    <div class="field" style="margin-bottom:1rem">
+      <label>Tasa Aplicable (%)</label>
+      <input type="number" id="tasaBalanz" value="39" step="0.1" min="0"
+             placeholder="ej: 39">
+      <p style="font-size:0.67rem;color:var(--muted);margin-top:0.3rem">Ingresá como porcentaje anual, ej: 39 = 39% TNA</p>
+    </div>
+
+    <div class="field">
+      <label>Comisión del Asesor</label>
+      <div class="tg" id="tgCosto" style="margin-bottom:0.6rem">
+        <button class="ab" data-v="tna"     onclick="setCosto('tna')">Sobre TNA</button>
+        <button            data-v="directo" onclick="setCosto('directo')">Directo</button>
+      </div>
+      <div style="display:flex;align-items:center;gap:0.5rem;font-size:0.8rem;color:var(--muted)">
+        <span id="costoLbl">Comisión (% TNA):</span>
+        <input class="pct" type="number" id="costoTasa" value="2" step="0.1" min="0" style="width:55px">
+        <span style="font-size:0.72rem;color:var(--muted)">%</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- BANCO -->
+  <div class="panel" style="margin-bottom:0">
+    <div class="panel-title"><span class="dot dot-bc"></span>Banco — Descuento Bancario</div>
+
+    <div class="field" style="margin-bottom:1rem">
+      <label>Tasa Aplicable (%)</label>
+      <input type="number" id="tasaBanco" value="34" step="0.1" min="0"
+             placeholder="ej: 34">
+      <p style="font-size:0.67rem;color:var(--muted);margin-top:0.3rem">Ingresá como porcentaje anual, ej: 34 = 34% TNA</p>
+    </div>
+
+    <div class="field">
+      <label style="margin-bottom:0.6rem;display:block">Conceptos y tasas aplicadas</label>
+
+      <!-- tabla alineada: label izq, input+% der siempre al mismo margen -->
+      <div style="display:table;width:100%;border-collapse:collapse">
+
+        <div style="display:table-row">
+          <span style="display:table-cell;font-size:0.79rem;color:var(--muted);padding:0.3rem 0;border-bottom:1px solid var(--bg);vertical-align:middle">IVA sobre Intereses</span>
+          <span style="display:table-cell;width:80px;text-align:right;padding:0.3rem 0;border-bottom:1px solid var(--bg);vertical-align:middle">
+            <span style="display:inline-flex;align-items:center;gap:3px">
+              <input class="pct" type="number" id="ivaIntPct" value="10.5" step="0.1" min="0">
+              <span style="font-size:0.72rem;color:var(--muted)">%</span>
+            </span>
+          </span>
+        </div>
+
+        <div style="display:table-row">
+          <span style="display:table-cell;font-size:0.79rem;color:var(--muted);padding:0.3rem 0;border-bottom:1px solid var(--bg);vertical-align:middle">IVA RIN</span>
+          <span style="display:table-cell;width:80px;text-align:right;padding:0.3rem 0;border-bottom:1px solid var(--bg);vertical-align:middle">
+            <span style="display:inline-flex;align-items:center;gap:3px">
+              <input class="pct" type="number" id="ivaRinPct" value="1.5" step="0.1" min="0">
+              <span style="font-size:0.72rem;color:var(--muted)">%</span>
+            </span>
+          </span>
+        </div>
+
+        <div style="display:table-row">
+          <span style="display:table-cell;font-size:0.79rem;color:var(--muted);padding:0.3rem 0;border-bottom:1px solid var(--bg);vertical-align:middle">I.B.B.B.</span>
+          <span style="display:table-cell;width:80px;text-align:right;padding:0.3rem 0;border-bottom:1px solid var(--bg);vertical-align:middle">
+            <span style="display:inline-flex;align-items:center;gap:3px">
+              <input class="pct" type="number" id="ibbbPct" value="1.75" step="0.05" min="0">
+              <span style="font-size:0.72rem;color:var(--muted)">%</span>
+            </span>
+          </span>
+        </div>
+
+        <div style="display:table-row">
+          <span style="display:table-cell;font-size:0.79rem;color:var(--muted);padding:0.3rem 0;border-bottom:1px solid var(--bg);vertical-align:middle">Imp. Débito y Crédito</span>
+          <span style="display:table-cell;width:80px;text-align:right;padding:0.3rem 0;border-bottom:1px solid var(--bg);vertical-align:middle">
+            <span style="display:inline-flex;align-items:center;gap:3px">
+              <input class="pct" type="number" id="debCredPct" value="1.2" step="0.1" min="0">
+              <span style="font-size:0.72rem;color:var(--muted)">%</span>
+            </span>
+          </span>
+        </div>
+
+        <div style="display:table-row">
+          <span style="display:table-cell;font-size:0.79rem;color:var(--muted);padding:0.3rem 0;border-bottom:1px solid var(--bg);vertical-align:middle">Imp. de Sellos</span>
+          <span style="display:table-cell;width:80px;text-align:right;padding:0.3rem 0;border-bottom:1px solid var(--bg);vertical-align:middle">
+            <span style="display:inline-flex;align-items:center;gap:3px">
+              <input class="pct" type="number" id="sellosPct" value="0" step="0.1" min="0">
+              <span style="font-size:0.72rem;color:var(--muted)">%</span>
+            </span>
+          </span>
+        </div>
+
+      </div>
+
+      <!-- Comisión Bancaria: igual estructura que Comisión del Asesor -->
+      <div style="border-top:1px solid var(--border);margin-top:0.75rem;padding-top:0.75rem">
+        <label style="font-size:0.75rem;font-weight:600;color:var(--muted);margin-bottom:0.4rem;display:block">Comisión Bancaria</label>
+        <div class="tg" id="tgCom" style="margin-bottom:0.6rem">
+          <button class="abc" data-v="tna"     onclick="setCom('tna')">Sobre TNA</button>
+          <button             data-v="directo" onclick="setCom('directo')">Directo</button>
+        </div>
+        <div style="display:flex;align-items:center;gap:0.5rem;font-size:0.8rem;color:var(--muted)">
+          <span id="comLbl">Comisión (% TNA):</span>
+          <input class="pct" type="number" id="comisionPct" value="0" step="0.1" min="0" style="width:55px">
+          <span style="font-size:0.72rem;color:var(--muted)">%</span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</div><!-- end two-col params -->
+
+<!-- ===== VERDICT ===== -->
+<div class="verdict" id="verdict">
+  <div class="verdict-icon" id="vIcon">⚖️</div>
+  <div class="verdict-text" id="vText">Calculando…</div>
+</div>
+
+<!-- ===== RESULTADOS ===== -->
+<div class="two-col" style="margin-bottom:1.25rem">
+
+  <div class="res-card balanz-card" id="cardB">
+    <div class="rch">
+      <span class="badge badge-b">Balanz</span>
+      <span class="badge-sub">Mercado de capitales</span>
+      <span class="win-badge" id="wbB" style="display:none">✓ Conviene</span>
+    </div>
+    <p class="neto-lbl">Neto acreditado</p>
+    <p class="neto-val" id="netoB">—</p>
+    <div class="drows">
+      <div class="dr"><span class="dl">Plazo</span><span class="dv" id="rPlazoB">—</span></div>
+      <div class="dr"><span class="dl">Fecha de acreditación</span><span class="dv" id="rFAB">—</span></div>
+      <div class="dr"><span class="dl">Precio descontado</span><span class="dv" id="rPrecioB">—</span></div>
+      <div class="dr"><span class="dl">Comisión del asesor</span><span class="dv neg" id="rCostosB">—</span></div>
+      <div class="dr"><span class="dl">IVA (Comisión)</span><span class="dv neg" id="rIvaB">—</span></div>
+      <div class="dr"><span class="dl">Derecho de Mercado</span><span class="dv neg" id="rDM">—</span></div>
+      <div class="dr"><span class="dl">IVA (Derecho de Mercado)</span><span class="dv neg" id="rIvaDM">—</span></div>
+    </div>
+  </div>
+
+  <div class="res-card banco-card" id="cardBco">
+    <div class="rch">
+      <span class="badge badge-bc">Banco</span>
+      <span class="badge-sub">Descuento bancario</span>
+      <span class="win-badge" id="wbBco" style="display:none">✓ Conviene</span>
+    </div>
+    <p class="neto-lbl">Neto acreditado</p>
+    <p class="neto-val" id="netoBco">—</p>
+    <div class="drows">
+      <div class="dr"><span class="dl">Plazo</span><span class="dv" id="rPlazoBco">—</span></div>
+      <div class="dr"><span class="dl">Fecha de acreditación</span><span class="dv" id="rFABco">—</span></div>
+      <div class="dr"><span class="dl">Intereses</span><span class="dv neg" id="rInt">—</span></div>
+      <div class="dr"><span class="dl">IVA sobre Intereses</span><span class="dv neg" id="rIvaInt">—</span></div>
+      <div class="dr"><span class="dl">IVA RIN</span><span class="dv neg" id="rIvaRin">—</span></div>
+      <div class="dr"><span class="dl">I.B.B.B.</span><span class="dv neg" id="rIbbb">—</span></div>
+      <div class="dr"><span class="dl">Imp. Débito y Crédito</span><span class="dv neg" id="rDC">—</span></div>
+      <div class="dr"><span class="dl">Imp. de Sellos</span><span class="dv neg" id="rSellos">—</span></div>
+      <div class="dr"><span class="dl">Comisión Bancaria</span><span class="dv neg" id="rCom">—</span></div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ===== BARS ===== -->
+<div class="panel" style="margin-bottom:0">
+  <div class="panel-title">Comparación visual — Neto acreditado</div>
+  <div class="bar-row">
+    <span class="bar-lbl bl">Balanz</span>
+    <div class="bar-track"><div class="bar-fill bl" id="barB" style="width:0%"></div></div>
+    <span class="bar-amt" id="barLblB">—</span>
+  </div>
+  <div class="bar-row">
+    <span class="bar-lbl bc">Banco</span>
+    <div class="bar-track"><div class="bar-fill bc" id="barBco" style="width:0%"></div></div>
+    <span class="bar-amt" id="barLblBco">—</span>
+  </div>
+</div>
+
+</div><!-- .main -->
+
+<script>
+let tAcred = 0, costoTipo = 'tna', comTipo = 'tna';
+
+const fmt = n => '$' + Math.round(n).toLocaleString('es-AR');
+
+function addBizDays(dateStr, n) {
+  const d = new Date(dateStr + 'T12:00:00');
+  let a = 0;
+  while (a < n) { d.setDate(d.getDate()+1); if(d.getDay()!==0&&d.getDay()!==6) a++; }
+  return d;
+}
+function fmtD(d) {
+  return d.toLocaleDateString('es-AR', {day:'2-digit', month:'2-digit', year:'numeric'});
+}
+
+function setT(v) {
+  tAcred = v;
+  document.querySelectorAll('#tgAcred button').forEach(b => b.className = b.dataset.v==v ? 'ab' : '');
+  calcular();
+}
+
+function setCosto(t) {
+  costoTipo = t;
+  document.querySelectorAll('#tgCosto button').forEach(b => b.className = b.dataset.v==t ? 'ab' : '');
+  document.getElementById('costoLbl').textContent = t === 'directo' ? 'Comisión (% directo):' : 'Comisión (% TNA):';
+  calcular();
+}
+
+function setCom(t) {
+  comTipo = t;
+  document.querySelectorAll('#tgCom button').forEach(b => b.className = b.dataset.v==t ? 'abc' : '');
+  document.getElementById('comLbl').textContent = t === 'directo' ? 'Comisión (% directo):' : 'Comisión (% TNA):';
+  calcular();
+}
+
+function calcular() {
+  const monto     = parseFloat(document.getElementById('monto').value)      || 0;
+  const liq       = document.getElementById('fechaLiq').value;
+  const venc      = document.getElementById('fechaVenc').value;
+  // tasas ingresadas como porcentaje entero, ej: 39 = 39% anual → dividir /100 para decimal
+  const tasaB_    = (parseFloat(document.getElementById('tasaBalanz').value) || 0) / 100;
+  const tasaBco_  = (parseFloat(document.getElementById('tasaBanco').value)  || 0) / 100;
+  const costoTasa_= (parseFloat(document.getElementById('costoTasa').value)  || 0) / 100;
+
+  const ivaIntPct_= (parseFloat(document.getElementById('ivaIntPct').value)  || 0) / 100;
+  const ivaRinPct_= (parseFloat(document.getElementById('ivaRinPct').value)  || 0) / 100;
+  const ibbbPct_  = (parseFloat(document.getElementById('ibbbPct').value)    || 0) / 100;
+  const dcPct_    = (parseFloat(document.getElementById('debCredPct').value) || 0) / 100;
+  const sellPct_  = (parseFloat(document.getElementById('sellosPct').value)  || 0) / 100;
+  const comPct_   = (parseFloat(document.getElementById('comisionPct').value)|| 0) / 100;
+
+  if (!liq || !venc || monto <= 0) return;
+
+  const dLiq  = new Date(liq  + 'T12:00:00');
+  const dVenc = new Date(venc + 'T12:00:00');
+  const plazo = Math.round((dVenc - dLiq) / 86400000);
+
+  // Fecha de acreditación compartida
+  const dAcred = tAcred === 0 ? new Date(dVenc) : addBizDays(venc, tAcred);
+  const fechaStr = fmtD(dAcred);
+  document.getElementById('fechaAcredChip').textContent = fechaStr;
+  document.getElementById('plazoChip').textContent = plazo;
+  document.getElementById('rFAB').textContent   = fechaStr;
+  document.getElementById('rFABco').textContent = fechaStr;
+
+  // ===== BALANZ =====
+  // Precio descontado: monto / (1 + tasa_diaria * plazo)
+  // tasa_diaria = tasa_anual / 365
+  const precioDesc = monto / (1 + tasaB_ * plazo / 365);
+
+  let costos = 0;
+  if (costoTipo === 'directo') {
+    costos = monto * costoTasa_;
+  } else {
+    costos = monto * costoTasa_ * (plazo / 365);
+  }
+
+  const ivaCostos = costos * 0.21;
+  // Derecho de Mercado: ratio extraído del Excel (17383.9 / 218931.5 ≈ 0.07941)
+  const dm     = costos * 0.07941;
+  const ivaDMv = dm * 0.21;
+
+  const netoB = precioDesc - costos - ivaCostos - dm - ivaDMv;
+
+  // ===== BANCO =====
+  const intereses = monto * tasaBco_ * (plazo / 365);
+  const ivaInt    = intereses * ivaIntPct_;
+  const ivaRin    = intereses * ivaRinPct_;
+  const ibbb      = intereses * ibbbPct_;
+  const dc        = monto     * dcPct_;
+  const sellos    = monto     * sellPct_;
+  const comision  = comTipo === 'tna'
+    ? monto * comPct_ * (plazo / 365)
+    : monto * comPct_;
+
+  const netoBco = monto - intereses - ivaInt - ivaRin - ibbb - dc - sellos - comision;
+
+  // --- DOM Balanz ---
+  document.getElementById('rPlazoB').textContent   = plazo + ' días';
+  document.getElementById('rPrecioB').textContent  = fmt(precioDesc);
+  document.getElementById('rCostosB').textContent  = '−' + fmt(costos);
+  document.getElementById('rIvaB').textContent     = '−' + fmt(ivaCostos);
+  document.getElementById('rDM').textContent       = '−' + fmt(dm);
+  document.getElementById('rIvaDM').textContent    = '−' + fmt(ivaDMv);
+  document.getElementById('netoB').textContent     = fmt(netoB);
+
+  // --- DOM Banco ---
+  document.getElementById('rPlazoBco').textContent = plazo + ' días';
+  document.getElementById('rInt').textContent      = '−' + fmt(intereses);
+  document.getElementById('rIvaInt').textContent   = '−' + fmt(ivaInt);
+  document.getElementById('rIvaRin').textContent   = '−' + fmt(ivaRin);
+  document.getElementById('rIbbb').textContent     = '−' + fmt(ibbb);
+  document.getElementById('rDC').textContent       = '−' + fmt(dc);
+  document.getElementById('rSellos').textContent   = sellos   > 0 ? '−' + fmt(sellos)   : '$0';
+  document.getElementById('rCom').textContent      = comision > 0 ? '−' + fmt(comision) : '$0';
+  document.getElementById('netoBco').textContent   = fmt(netoBco);
+
+  // --- Barras ---
+  const mx = Math.max(netoB, netoBco, 1);
+  document.getElementById('barB').style.width    = (netoB   / mx * 100).toFixed(1) + '%';
+  document.getElementById('barBco').style.width  = (netoBco / mx * 100).toFixed(1) + '%';
+  document.getElementById('barLblB').textContent   = fmt(netoB);
+  document.getElementById('barLblBco').textContent = fmt(netoBco);
+
+  // --- Verdict ---
+  const diff = Math.abs(netoB - netoBco);
+  const vEl   = document.getElementById('verdict');
+  const vIc   = document.getElementById('vIcon');
+  const vTx   = document.getElementById('vText');
+  const wbB_  = document.getElementById('wbB');
+  const wbBco_= document.getElementById('wbBco');
+  const cB_   = document.getElementById('cardB');
+  const cBco_ = document.getElementById('cardBco');
+
+  wbB_.style.display='none'; wbBco_.style.display='none';
+  cB_.classList.remove('winner'); cBco_.classList.remove('winner');
+  vEl.className = 'verdict';
+
+  if (netoB > netoBco) {
+    vEl.classList.add('bw'); vIc.textContent = '🏆';
+    vTx.innerHTML = 'Conviene el descuento en <strong>Mercado de Capitales (Balanz)</strong><small>Diferencia a favor: ' + fmt(diff) + ' (' + ((diff/netoBco)*100).toFixed(2) + '% más)</small>';
+    wbB_.style.display='inline-flex'; cB_.classList.add('winner');
+  } else if (netoBco > netoB) {
+    vEl.classList.add('bcw'); vIc.textContent = '🏦';
+    vTx.innerHTML = 'Conviene el <strong>Descuento Bancario</strong><small>Diferencia a favor: ' + fmt(diff) + ' (' + ((diff/netoB)*100).toFixed(2) + '% más)</small>';
+    wbBco_.style.display='inline-flex'; cBco_.classList.add('winner');
+  } else {
+    vEl.classList.add('tie'); vIc.textContent = '⚖️';
+    vTx.innerHTML = 'Las opciones son equivalentes<small>Resultado neto idéntico en ambas alternativas</small>';
+  }
+}
+
+document.querySelectorAll('input[type=number], input[type=date]').forEach(el => el.addEventListener('input', calcular));
+calcular();
+</script>
+</body>
+</html>
