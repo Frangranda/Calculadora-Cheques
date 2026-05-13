@@ -1,0 +1,1456 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Simulador de Venta de Cheques — Balanz vs Banco</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Outfit:wght@700;800&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --balanz: #1D3557; --balanz-light: #457B9D;
+  --banco: #8B2635;
+  --win: #2D6A4F; --win-bg: #D8F3DC;
+  --bg: #F7F5F0; --card: #FFFFFF;
+  --text: #1A1A2E; --muted: #6B6B7A; --border: #E0DDD6;
+  --shadow: 0 2px 16px rgba(29,53,87,0.08);
+}
+body { font-family: 'Syne', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; padding-bottom: 4rem; }
+
+header {
+  background: linear-gradient(135deg, #0D1E35 0%, #1A3A5C 60%, #1D5080 100%);
+  color: white;
+  padding: 0;
+  position: relative;
+  overflow: hidden;
+  min-height: 90px;
+}
+header::before { content:''; position:absolute; top:-60px; right:-60px; width:220px; height:220px; border-radius:50%; background:rgba(168,218,220,0.08); pointer-events:none; }
+header::after  { content:''; position:absolute; bottom:-40px; left:-40px; width:160px; height:160px; border-radius:50%; background:rgba(168,218,220,0.05); pointer-events:none; }
+.header-inner {
+  display: grid;
+  grid-template-columns: 140px 1fr 140px;
+  align-items: center;
+  padding: 1.2rem 2rem;
+  position: relative;
+  z-index: 1;
+  gap: 1rem;
+}
+.header-logo {
+  justify-self: start;
+}
+.header-logo .hl-name {
+  font-family: 'Outfit', sans-serif;
+  font-size: 1.1rem;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: #fff;
+  display: block;
+  line-height: 1;
+}
+.header-logo .hl-divider {
+  width: 100%;
+  height: 1px;
+  background: rgba(255,255,255,0.45);
+  margin: 0.22rem 0;
+}
+.header-logo .hl-sub {
+  font-family: 'Outfit', sans-serif;
+  font-size: 0.5rem;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.6);
+  display: block;
+}
+.header-center { text-align: center; }
+header h1 { font-size:1rem; font-weight:800; letter-spacing:-0.3px; line-height:1.2; white-space:nowrap; }
+header p  { font-size:0.72rem; opacity:0.65; margin-top:0.3rem; font-family:'DM Mono',monospace; white-space:nowrap; }
+
+.main { max-width: 980px; margin: 0 auto; padding: 2rem 1.5rem; }
+
+.panel {
+  background: var(--card); border-radius: 16px; border: 1px solid var(--border);
+  padding: 1.5rem; margin-bottom: 1.25rem; box-shadow: var(--shadow);
+}
+.panel-title {
+  font-size: 0.72rem; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase;
+  color: var(--muted); margin-bottom: 1.25rem; display: flex; align-items: center; gap: 0.5rem;
+}
+.dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+.dot-b { background:var(--balanz); } .dot-bc { background:var(--banco); }
+
+/* grid de inputs */
+.ig { display:grid; grid-template-columns:repeat(auto-fit, minmax(175px,1fr)); gap:1rem; }
+.ig-3 { display:grid; grid-template-columns:repeat(3,1fr); gap:1rem; }
+.ig-2 { display:grid; grid-template-columns:1fr 1fr; gap:1rem; }
+
+.field label { display:block; font-size:0.75rem; font-weight:600; color:var(--muted); margin-bottom:0.35rem; letter-spacing:0.3px; }
+.field input {
+  width:100%; padding:0.55rem 0.75rem; border:1.5px solid var(--border); border-radius:8px;
+  font-family:'DM Mono',monospace; font-size:0.9rem; color:var(--text);
+  background:var(--bg); transition:border-color 0.15s; outline:none;
+}
+.field input:focus { border-color:var(--balanz-light); background:white; }
+
+/* toggle group */
+.tg { display:flex; border:1.5px solid var(--border); border-radius:8px; overflow:hidden; }
+.tg button {
+  flex:1; padding:0.48rem 0.3rem; border:none; background:var(--bg);
+  font-family:'Syne',sans-serif; font-size:0.75rem; font-weight:600;
+  color:var(--muted); cursor:pointer; transition:background 0.15s, color 0.15s;
+  border-right:1px solid var(--border);
+}
+.tg button:last-child { border-right:none; }
+.tg button.ab  { background:var(--balanz); color:white; }
+.tg button.abc { background:var(--banco);  color:white; }
+
+/* acred chip */
+.acred-chip {
+  display:inline-block; margin-top:0.45rem;
+  font-family:'DM Mono',monospace; font-size:0.8rem; font-weight:500;
+  color:var(--balanz); letter-spacing:0.2px;
+}
+
+.two-col { display:grid; grid-template-columns:1fr 1fr; gap:1.25rem; margin-bottom:1.25rem; }
+
+/* resultado cards */
+.res-card {
+  background:var(--card); border-radius:16px; border:2px solid var(--border);
+  padding:1.4rem; box-shadow:var(--shadow); transition:border-color 0.2s;
+}
+.res-card.balanz-card { border-color:rgba(29,53,87,0.2); }
+.res-card.banco-card  { border-color:rgba(139,38,53,0.2); }
+.res-card.winner { border-color:var(--win); border-width:2.5px; }
+
+.rch { display:flex; align-items:center; gap:0.6rem; margin-bottom:1rem; flex-wrap:wrap; }
+.badge { font-size:0.68rem; font-weight:700; letter-spacing:1px; text-transform:uppercase; padding:0.22rem 0.65rem; border-radius:20px; }
+.badge-b { background:var(--balanz); color:white; } .badge-bc { background:var(--banco); color:white; }
+.badge-sub { font-size:0.7rem; color:var(--muted); font-family:'DM Mono',monospace; }
+.win-badge { font-size:0.65rem; font-weight:700; letter-spacing:0.8px; text-transform:uppercase; padding:0.2rem 0.6rem; border-radius:20px; background:var(--win-bg); color:var(--win); margin-left:auto; }
+
+.neto-lbl { font-size:0.7rem; font-weight:600; color:var(--muted); letter-spacing:0.5px; text-transform:uppercase; margin-bottom:0.2rem; }
+.neto-val { font-family:'DM Mono',monospace; font-size:1.75rem; font-weight:500; letter-spacing:-1px; line-height:1; margin-bottom:0.85rem; }
+.balanz-card .neto-val { color:var(--balanz); } .banco-card .neto-val { color:var(--banco); }
+
+.drows { border-top:1px solid var(--border); padding-top:0.8rem; }
+.dr { display:flex; justify-content:space-between; align-items:center; padding:0.27rem 0; font-size:0.79rem; border-bottom:1px solid var(--bg); }
+.dr:last-child { border-bottom:none; }
+.dl { color:var(--muted); } 
+.dv { font-family:'DM Mono',monospace; font-size:0.77rem; font-weight:500; }
+.dv.neg { color:#B84C58; }
+
+/* verdict */
+.verdict { border-radius:14px; padding:1.1rem 1.4rem; display:flex; align-items:center; gap:0.9rem; margin-bottom:1.25rem; font-weight:600; font-size:0.9rem; }
+.verdict.bw  { background:rgba(29,53,87,0.07);   border:1.5px solid rgba(29,53,87,0.25);   color:var(--balanz); }
+.verdict.bcw { background:rgba(139,38,53,0.07);  border:1.5px solid rgba(139,38,53,0.25);  color:var(--banco); }
+.verdict.tie { background:rgba(107,107,122,0.07); border:1.5px solid rgba(107,107,122,0.25); color:var(--muted); }
+.verdict-icon { font-size:1.6rem; line-height:1; flex-shrink:0; }
+.verdict-text small { display:block; font-weight:400; font-family:'DM Mono',monospace; font-size:0.72rem; opacity:0.75; margin-top:0.2rem; }
+
+/* bars */
+.bar-row { display:flex; align-items:center; gap:0.75rem; margin-bottom:0.8rem; }
+.bar-row:last-child { margin-bottom:0; }
+.bar-lbl { font-size:0.72rem; font-weight:700; letter-spacing:0.5px; text-transform:uppercase; min-width:55px; }
+.bar-lbl.bl { color:var(--balanz); } .bar-lbl.bc { color:var(--banco); }
+.bar-track { flex:1; height:10px; border-radius:999px; background:var(--bg); overflow:hidden; }
+.bar-fill { height:100%; border-radius:999px; transition:width 0.4s cubic-bezier(0.4,0,0.2,1); }
+.bar-fill.bl { background:var(--balanz); } .bar-fill.bc { background:var(--banco); }
+.bar-amt { font-family:'DM Mono',monospace; font-size:0.78rem; font-weight:500; min-width:115px; text-align:right; }
+
+/* pequeño input de porcentaje dentro de filas banco */
+.pct {
+  width:90px; padding:0.12rem 0.4rem; border:1px solid var(--border); border-radius:5px;
+  font-family:'DM Mono',monospace; font-size:0.68rem; background:var(--bg);
+  text-align:left; outline:none; color:var(--text);
+  -moz-appearance:textfield;
+}
+.pct:focus { border-color:var(--balanz-light); background:white; }
+.pct::-webkit-outer-spin-button,
+.pct::-webkit-inner-spin-button { -webkit-appearance:none; margin:0; }
+input[type=number]::-webkit-outer-spin-button,
+input[type=number]::-webkit-inner-spin-button { -webkit-appearance:none; margin:0; }
+input[type=number] { -moz-appearance:textfield; }
+
+.brow { display:flex; align-items:center; justify-content:space-between; font-size:0.79rem; padding:0.3rem 0; border-bottom:1px solid var(--bg); }
+.brow:last-child { border-bottom:none; }
+.brow .bl2 { color:var(--muted); }
+.brow-right { display:flex; align-items:center; gap:0.35rem; }
+
+@media(max-width:700px){
+  .two-col { grid-template-columns:1fr; }
+  .ig-5 { grid-template-columns:repeat(2,1fr); }
+  .neto-val { font-size:1.4rem; }
+}
+
+/* ===== TABS ===== */
+.tab-nav {
+  background: #0D1E35;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+.tab-nav-inner {
+  max-width: 980px;
+  margin: 0 auto;
+  padding: 0 1.5rem;
+  display: flex;
+  gap: 0;
+}
+.tab-btn {
+  padding: 0.85rem 1.5rem;
+  border: none;
+  background: transparent;
+  color: rgba(255,255,255,0.45);
+  font-family: 'Syne', sans-serif;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  cursor: pointer;
+  border-bottom: 2.5px solid transparent;
+  transition: color 0.15s, border-color 0.15s;
+  white-space: nowrap;
+}
+.tab-btn:hover { color: rgba(255,255,255,0.75); }
+.tab-btn.active { color: #fff; border-bottom-color: #A8DADC; }
+.tab-pane { display: none; }
+.tab-pane.active { display: block; }
+
+/* ===== LOTE tab ===== */
+.lote-config {
+  background: var(--card); border-radius: 16px; border: 1px solid var(--border);
+  padding: 1.5rem; margin-bottom: 1.25rem; box-shadow: var(--shadow);
+}
+.lote-cheques-wrap {
+  display: flex; flex-direction: column; gap: 0.75rem; margin-bottom: 1.25rem;
+}
+.cheque-row {
+  background: var(--card); border-radius: 12px; border: 1px solid var(--border);
+  padding: 1rem 1.25rem; box-shadow: 0 1px 6px rgba(29,53,87,0.05);
+  display: grid;
+  grid-template-columns: 28px 1fr 1fr 1fr 1fr 1fr;
+  gap: 0.75rem;
+  align-items: end;
+}
+.cheque-num {
+  font-family: 'DM Mono', monospace; font-size: 0.78rem; font-weight: 500;
+  color: var(--balanz); opacity: 0.5; padding-bottom: 0.6rem;
+  align-self: end;
+}
+.cheque-row .field label { font-size: 0.68rem; }
+.cheque-row .field input {
+  padding: 0.45rem 0.6rem; font-size: 0.82rem;
+}
+
+/* resumen lote */
+.lote-resumen {
+  background: var(--card); border-radius: 16px;
+  border: 2px solid rgba(29,53,87,0.2);
+  padding: 1.5rem; box-shadow: var(--shadow);
+}
+.lote-header {
+  display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1.25rem; flex-wrap: wrap;
+}
+.lote-neto-lbl { font-size: 0.7rem; font-weight: 600; color: var(--muted); letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 0.2rem; }
+.lote-neto-val { font-family: 'DM Mono', monospace; font-size: 2rem; font-weight: 500; letter-spacing: -1px; color: var(--balanz); line-height: 1; margin-bottom: 1.25rem; }
+.lote-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; margin-bottom: 1.25rem;
+}
+.lote-conceptos { border-top: 1px solid var(--border); padding-top: 0.8rem; }
+.lote-tabla {
+  width: 100%; border-collapse: collapse; margin-top: 0.75rem;
+}
+.lote-tabla th {
+  font-size: 0.68rem; font-weight: 700; letter-spacing: 1px; text-transform: uppercase;
+  color: var(--muted); padding: 0.4rem 0.6rem; border-bottom: 1.5px solid var(--border);
+  text-align: left;
+}
+.lote-tabla th:not(:first-child) { text-align: right; }
+.lote-tabla td {
+  padding: 0.35rem 0.6rem; font-size: 0.79rem; border-bottom: 1px solid var(--bg);
+  vertical-align: middle;
+}
+.lote-tabla td:not(:first-child) { text-align: right; font-family: 'DM Mono', monospace; font-size: 0.77rem; }
+.lote-tabla tr:last-child td { border-bottom: none; }
+.lote-tabla .td-label { color: var(--muted); }
+.lote-tabla .td-neg { color: #B84C58; }
+.lote-tabla .td-total { font-weight: 700; color: var(--balanz); }
+.lote-tabla tr.total-row td { border-top: 1.5px solid var(--border); padding-top: 0.55rem; font-weight: 700; }
+
+.qty-ctrl {
+  display: flex; align-items: center; gap: 0.5rem;
+}
+.qty-btn {
+  width: 28px; height: 28px; border-radius: 8px; border: 1.5px solid var(--border);
+  background: var(--bg); color: var(--text); font-size: 1rem; font-weight: 700;
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  line-height: 1; transition: background 0.12s, border-color 0.12s;
+  font-family: 'DM Mono', monospace;
+}
+.qty-btn:hover { background: var(--balanz); color: white; border-color: var(--balanz); }
+.qty-val {
+  font-family: 'DM Mono', monospace; font-size: 1.1rem; font-weight: 500;
+  color: var(--balanz); min-width: 24px; text-align: center;
+}
+@media(max-width:700px){
+  .cheque-row { grid-template-columns: 28px 1fr 1fr; }
+}
+
+/* ===== COMPARAR LOTE ===== */
+.cl-top {
+  background:var(--card);border-radius:16px;border:1px solid var(--border);
+  padding:1.1rem 1.5rem;margin-bottom:1.25rem;box-shadow:var(--shadow);
+  display:flex;align-items:center;gap:2rem;flex-wrap:wrap;
+}
+.cl-split { display:grid;grid-template-columns:1fr 1fr;gap:1.25rem;margin-bottom:1.25rem; }
+.cl-col {
+  background:var(--card);border-radius:16px;border:1px solid var(--border);
+  padding:1.4rem;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:1rem;
+}
+.cl-col.col-b   { border-top:3px solid var(--balanz); }
+.cl-col.col-bco { border-top:3px solid var(--banco); }
+.cl-col-title {
+  font-size:0.72rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;
+  display:flex;align-items:center;gap:0.5rem;margin-bottom:0.1rem;
+}
+.cl-col-title.t-b   { color:var(--balanz); }
+.cl-col-title.t-bco { color:var(--banco); }
+/* Fila cheque 2 líneas */
+.cl-row {
+  background:var(--bg);border-radius:10px;border:1px solid var(--border);
+  padding:0.6rem 0.85rem;display:flex;flex-direction:column;gap:0.45rem;
+}
+.cl-row-line { display:grid;gap:0.5rem;align-items:end; }
+.cl-row-num { font-family:'DM Mono',monospace;font-size:0.72rem;font-weight:500;color:var(--muted);min-width:18px; }
+.cl-row .field label { font-size:0.64rem; }
+.cl-row .field input { padding:0.38rem 0.52rem;font-size:0.79rem; }
+/* Resumen lado a lado */
+.cl-resumen-wrap {
+  display:grid;grid-template-columns:1fr 1fr;gap:1.25rem;margin-bottom:1.25rem;
+}
+.cl-res-card {
+  background:var(--card);border-radius:16px;border:2px solid var(--border);
+  padding:1.4rem;box-shadow:var(--shadow);transition:border-color 0.2s;
+}
+.cl-res-card.b-card   { border-color:rgba(29,53,87,0.2); }
+.cl-res-card.bco-card { border-color:rgba(139,38,53,0.2); }
+.cl-res-card.winner   { border-color:var(--win);border-width:2.5px; }
+.cl-neto-lbl { font-size:0.7rem;font-weight:600;color:var(--muted);letter-spacing:0.5px;text-transform:uppercase;margin-bottom:0.2rem; }
+.cl-neto-val { font-family:'DM Mono',monospace;font-size:1.75rem;font-weight:500;letter-spacing:-1px;line-height:1;margin-bottom:0.85rem; }
+.cl-res-card.b-card   .cl-neto-val { color:var(--balanz); }
+.cl-res-card.bco-card .cl-neto-val { color:var(--banco); }
+/* Veredicto */
+.cl-verdict {
+  border-radius:14px;padding:1.1rem 1.4rem;display:flex;align-items:center;
+  gap:0.9rem;margin-bottom:1.25rem;font-weight:600;font-size:0.9rem;
+}
+.cl-verdict.bw  {background:rgba(29,53,87,0.07);border:1.5px solid rgba(29,53,87,0.25);color:var(--balanz);}
+.cl-verdict.bcw {background:rgba(139,38,53,0.07);border:1.5px solid rgba(139,38,53,0.25);color:var(--banco);}
+.cl-verdict.tie {background:rgba(107,107,122,0.07);border:1.5px solid rgba(107,107,122,0.25);color:var(--muted);}
+.cl-verdict small {display:block;font-weight:400;font-family:'DM Mono',monospace;font-size:0.72rem;opacity:0.75;margin-top:0.2rem;}
+@media(max-width:700px){
+  .cl-split,.cl-resumen-wrap{grid-template-columns:1fr;}
+  .cl-row-line{grid-template-columns:18px 1fr!important;}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-inner">
+    <div class="header-logo">
+      <span class="hl-name">BALANZ</span>
+      <div class="hl-divider"></div>
+      <span class="hl-sub">Nº1 en inversiones</span>
+    </div>
+    <div class="header-center">
+      <h1>Simulador de Venta de Cheques</h1>
+      <p id="headerSub">Mercado de Capitales (Balanz) vs. Descuento Bancario</p>
+    </div>
+    <div></div>
+  </div>
+</header>
+
+<div class="tab-nav">
+  <div class="tab-nav-inner">
+    <button class="tab-btn active" onclick="switchTab('comparacion')">⚖️&nbsp; Balanz vs Banco</button>
+    <button class="tab-btn"        onclick="switchTab('lote')">📦&nbsp; Lote de Cheques</button>
+    <button class="tab-btn"        onclick="switchTab('comparalote')">⚖️📦&nbsp; Comparar Lote</button>
+  </div>
+</div>
+
+<div class="tab-pane active" id="tab-comparacion">
+<div class="main">
+
+<!-- ===== DATOS BASE ===== -->
+<div class="panel">
+  <div class="panel-title">Datos de la operación</div>
+
+  <!-- Fila 1: monto + fechas -->
+  <div class="ig-3" style="margin-bottom:1rem">
+    <div class="field">
+      <label>Monto del Cheque ($)</label>
+      <input type="text" id="monto" value="" inputmode="numeric" autocomplete="off" placeholder="0">
+    </div>
+    <div class="field">
+      <label>Fecha de Negociación</label>
+      <input type="date" id="fechaLiq" value="">
+    </div>
+    <div class="field">
+      <label>Fecha de Vencimiento</label>
+      <input type="date" id="fechaVenc" value="">
+    </div>
+  </div>
+
+  <!-- Separador -->
+  <div style="border-top:1px solid var(--border); margin-bottom:1rem"></div>
+
+  <!-- Fila 2: acreditación + plazo calculado -->
+  <div class="ig-2">
+    <div class="field">
+      <label>Fecha de Cobro</label>
+      <div class="tg" id="tgAcred" style="margin-bottom:0.5rem">
+        <button class="ab" data-v="0" onclick="setT(0)">T+0</button>
+        <button            data-v="1" onclick="setT(1)">T+1</button>
+        <button            data-v="2" onclick="setT(2)">T+2</button>
+      </div>
+      <div style="display:flex;align-items:center;gap:0.4rem">
+        <span style="font-size:0.72rem;color:var(--muted);font-weight:600">Fecha:</span>
+        <span class="acred-chip" id="fechaAcredChip">—</span>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Plazo (días corridos)</label>
+      <div style="
+        padding:0.55rem 0.75rem; border:1.5px solid var(--border); border-radius:8px;
+        background:var(--bg); font-family:'DM Mono',monospace; font-size:1.1rem;
+        font-weight:500; color:var(--text); letter-spacing:-0.5px;
+        display:flex; align-items:baseline; gap:0.4rem;
+      ">
+        <span id="plazoChip">—</span>
+        <span style="font-size:0.75rem;color:var(--muted);font-weight:400">días</span>
+      </div>
+      <p style="font-size:0.67rem;color:var(--muted);margin-top:0.35rem">Entre fecha de negociación y vencimiento</p>
+    </div>
+  </div>
+</div>
+
+<!-- ===== DOS PANELES DE PARÁMETROS ===== -->
+<div class="two-col">
+
+  <!-- BALANZ -->
+  <div class="panel" style="margin-bottom:0">
+    <div class="panel-title"><span class="dot dot-b"></span>Balanz — Mercado de Capitales</div>
+
+    <div class="field" style="margin-bottom:1rem">
+      <label>Tasa Aplicable (%)</label>
+      <input type="number" id="tasaBalanz" value="0" step="0.1" min="0"
+             placeholder="ej: 39">
+      <p style="font-size:0.67rem;color:var(--muted);margin-top:0.3rem">Ingresá como porcentaje anual, ej: 39 = 39% TNA</p>
+    </div>
+
+    <div class="field">
+      <label>Comisión del Asesor</label>
+      <div class="tg" id="tgCosto" style="margin-bottom:0.6rem">
+        <button class="ab" data-v="tna"     onclick="setCosto('tna')">Sobre TNA</button>
+        <button            data-v="directo" onclick="setCosto('directo')">Directo</button>
+      </div>
+      <div style="display:flex;align-items:center;gap:0.5rem;font-size:0.8rem;color:var(--muted)">
+        <span id="costoLbl">Comisión (% TNA):</span>
+        <input class="pct" type="number" id="costoTasa" value="0" step="0.1" min="0" style="width:110px">
+        <span style="font-size:0.72rem;color:var(--muted)">%</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- BANCO -->
+  <div class="panel" style="margin-bottom:0">
+    <div class="panel-title"><span class="dot dot-bc"></span>Banco — Descuento Bancario</div>
+
+    <div class="field" style="margin-bottom:1rem">
+      <label>Tasa Aplicable (%)</label>
+      <input type="number" id="tasaBanco" value="0" step="0.1" min="0"
+             placeholder="ej: 34">
+      <p style="font-size:0.67rem;color:var(--muted);margin-top:0.3rem">Ingresá como porcentaje anual, ej: 34 = 34% TNA</p>
+    </div>
+
+    <div class="field">
+      <label style="margin-bottom:0.6rem;display:block">Conceptos y tasas aplicadas</label>
+
+      <!-- tabla alineada: label izq, input+% der siempre al mismo margen -->
+      <div style="display:table;width:100%;border-collapse:collapse">
+
+        <div style="display:table-row">
+          <span style="display:table-cell;font-size:0.79rem;color:var(--muted);padding:0.3rem 0;border-bottom:1px solid var(--bg);vertical-align:middle">IVA sobre Intereses</span>
+          <span style="display:table-cell;width:80px;text-align:right;padding:0.3rem 0;border-bottom:1px solid var(--bg);vertical-align:middle">
+            <span style="display:inline-flex;align-items:center;gap:3px">
+              <input class="pct" type="number" id="ivaIntPct" value="10.5" step="0.1" min="0">
+              <span style="font-size:0.72rem;color:var(--muted)">%</span>
+            </span>
+          </span>
+        </div>
+
+        <div style="display:table-row">
+          <span style="display:table-cell;font-size:0.79rem;color:var(--muted);padding:0.3rem 0;border-bottom:1px solid var(--bg);vertical-align:middle">IVA RIN</span>
+          <span style="display:table-cell;width:80px;text-align:right;padding:0.3rem 0;border-bottom:1px solid var(--bg);vertical-align:middle">
+            <span style="display:inline-flex;align-items:center;gap:3px">
+              <input class="pct" type="number" id="ivaRinPct" value="1.5" step="0.1" min="0">
+              <span style="font-size:0.72rem;color:var(--muted)">%</span>
+            </span>
+          </span>
+        </div>
+
+        <div style="display:table-row">
+          <span style="display:table-cell;font-size:0.79rem;color:var(--muted);padding:0.3rem 0;border-bottom:1px solid var(--bg);vertical-align:middle">I.B.B.B.</span>
+          <span style="display:table-cell;width:80px;text-align:right;padding:0.3rem 0;border-bottom:1px solid var(--bg);vertical-align:middle">
+            <span style="display:inline-flex;align-items:center;gap:3px">
+              <input class="pct" type="number" id="ibbbPct" value="1.75" step="0.05" min="0">
+              <span style="font-size:0.72rem;color:var(--muted)">%</span>
+            </span>
+          </span>
+        </div>
+
+        <div style="display:table-row">
+          <span style="display:table-cell;font-size:0.79rem;color:var(--muted);padding:0.3rem 0;border-bottom:1px solid var(--bg);vertical-align:middle">Imp. Débito y Crédito</span>
+          <span style="display:table-cell;width:80px;text-align:right;padding:0.3rem 0;border-bottom:1px solid var(--bg);vertical-align:middle">
+            <span style="display:inline-flex;align-items:center;gap:3px">
+              <input class="pct" type="number" id="debCredPct" value="1.2" step="0.1" min="0">
+              <span style="font-size:0.72rem;color:var(--muted)">%</span>
+            </span>
+          </span>
+        </div>
+
+        <div style="display:table-row">
+          <span style="display:table-cell;font-size:0.79rem;color:var(--muted);padding:0.3rem 0;border-bottom:1px solid var(--bg);vertical-align:middle">Imp. de Sellos</span>
+          <span style="display:table-cell;width:80px;text-align:right;padding:0.3rem 0;border-bottom:1px solid var(--bg);vertical-align:middle">
+            <span style="display:inline-flex;align-items:center;gap:3px">
+              <input class="pct" type="number" id="sellosPct" value="0" step="0.1" min="0">
+              <span style="font-size:0.72rem;color:var(--muted)">%</span>
+            </span>
+          </span>
+        </div>
+
+      </div>
+
+      <!-- Comisión Bancaria: igual estructura que Comisión del Asesor -->
+      <div style="border-top:1px solid var(--border);margin-top:0.75rem;padding-top:0.75rem">
+        <label style="font-size:0.75rem;font-weight:600;color:var(--muted);margin-bottom:0.4rem;display:block">Comisión Bancaria</label>
+        <div class="tg" id="tgCom" style="margin-bottom:0.6rem">
+          <button class="abc" data-v="tna"     onclick="setCom('tna')">Sobre TNA</button>
+          <button             data-v="directo" onclick="setCom('directo')">Directo</button>
+        </div>
+        <div style="display:flex;align-items:center;gap:0.5rem;font-size:0.8rem;color:var(--muted)">
+          <span id="comLbl">Comisión (% TNA):</span>
+          <input class="pct" type="number" id="comisionPct" value="0" step="0.1" min="0" style="width:110px">
+          <span style="font-size:0.72rem;color:var(--muted)">%</span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</div><!-- end two-col params -->
+
+<!-- ===== VERDICT ===== -->
+<div class="verdict" id="verdict">
+  <div class="verdict-icon" id="vIcon">⚖️</div>
+  <div class="verdict-text" id="vText">Calculando…</div>
+</div>
+
+<!-- ===== RESULTADOS ===== -->
+<div class="two-col" style="margin-bottom:1.25rem">
+
+  <div class="res-card balanz-card" id="cardB">
+    <div class="rch">
+      <span class="badge badge-b">Balanz</span>
+      <span class="badge-sub">Mercado de capitales</span>
+      <span class="win-badge" id="wbB" style="display:none">✓ Conviene</span>
+    </div>
+    <p class="neto-lbl">Neto acreditado</p>
+    <p class="neto-val" id="netoB">—</p>
+    <div class="drows">
+      <div class="dr"><span class="dl">Plazo</span><span class="dv" id="rPlazoB">—</span></div>
+      <div class="dr"><span class="dl">Precio descontado</span><span class="dv" id="rPrecioB">—</span></div>
+      <div class="dr"><span class="dl">Comisión del asesor</span><span class="dv neg" id="rCostosB">—</span></div>
+      <div class="dr"><span class="dl">IVA (Comisión)</span><span class="dv neg" id="rIvaB">—</span></div>
+      <div class="dr"><span class="dl">Derecho de Mercado</span><span class="dv neg" id="rDM">—</span></div>
+      <div class="dr"><span class="dl">IVA (Derecho de Mercado)</span><span class="dv neg" id="rIvaDM">—</span></div>
+    </div>
+  </div>
+
+  <div class="res-card banco-card" id="cardBco">
+    <div class="rch">
+      <span class="badge badge-bc">Banco</span>
+      <span class="badge-sub">Descuento bancario</span>
+      <span class="win-badge" id="wbBco" style="display:none">✓ Conviene</span>
+    </div>
+    <p class="neto-lbl">Neto acreditado</p>
+    <p class="neto-val" id="netoBco">—</p>
+    <div class="drows">
+      <div class="dr"><span class="dl">Plazo</span><span class="dv" id="rPlazoBco">—</span></div>
+      <div class="dr"><span class="dl">Fecha de cobro</span><span class="dv" id="rFABco">—</span></div>
+      <div class="dr"><span class="dl">Intereses</span><span class="dv neg" id="rInt">—</span></div>
+      <div class="dr"><span class="dl">IVA sobre Intereses</span><span class="dv neg" id="rIvaInt">—</span></div>
+      <div class="dr"><span class="dl">IVA RIN</span><span class="dv neg" id="rIvaRin">—</span></div>
+      <div class="dr"><span class="dl">I.B.B.B.</span><span class="dv neg" id="rIbbb">—</span></div>
+      <div class="dr"><span class="dl">Imp. Débito y Crédito</span><span class="dv neg" id="rDC">—</span></div>
+      <div class="dr"><span class="dl">Imp. de Sellos</span><span class="dv neg" id="rSellos">—</span></div>
+      <div class="dr"><span class="dl">Comisión Bancaria</span><span class="dv neg" id="rCom">—</span></div>
+    </div>
+  </div>
+
+</div>
+
+
+
+</div><!-- .main -->
+</div><!-- tab-comparacion -->
+
+<script>
+let tAcred = 0, costoTipo = 'tna', comTipo = 'tna';
+
+const fmt = n => '$' + Math.round(n).toLocaleString('es-AR');
+const fmtNeto = n => '$' + (Math.round(n*100)/100).toLocaleString('es-AR',{minimumFractionDigits:2,maximumFractionDigits:2});
+
+function addBizDays(dateStr, n) {
+  const d = new Date(dateStr + 'T12:00:00');
+  let a = 0;
+  while (a < n) { d.setDate(d.getDate()+1); if(d.getDay()!==0&&d.getDay()!==6) a++; }
+  return d;
+}
+function fmtD(d) {
+  return d.toLocaleDateString('es-AR', {day:'2-digit', month:'2-digit', year:'numeric'});
+}
+
+function setT(v) {
+  tAcred = v;
+  document.querySelectorAll('#tgAcred button').forEach(b => b.className = b.dataset.v==v ? 'ab' : '');
+  calcular();
+}
+
+function setCosto(t) {
+  costoTipo = t;
+  document.querySelectorAll('#tgCosto button').forEach(b => b.className = b.dataset.v==t ? 'ab' : '');
+  document.getElementById('costoLbl').textContent = t === 'directo' ? 'Comisión (% directo):' : 'Comisión (% TNA):';
+  calcular();
+}
+
+function setCom(t) {
+  comTipo = t;
+  document.querySelectorAll('#tgCom button').forEach(b => b.className = b.dataset.v==t ? 'abc' : '');
+  document.getElementById('comLbl').textContent = t === 'directo' ? 'Comisión (% directo):' : 'Comisión (% TNA):';
+  calcular();
+}
+
+function calcular() {
+  const monto     = parseMonto();
+  const liq       = document.getElementById('fechaLiq').value;
+  const venc      = document.getElementById('fechaVenc').value;
+  // tasas ingresadas como porcentaje entero, ej: 39 = 39% anual → dividir /100 para decimal
+  const tasaB_    = (parseFloat(document.getElementById('tasaBalanz').value) || 0) / 100;
+  const tasaBco_  = (parseFloat(document.getElementById('tasaBanco').value)  || 0) / 100;
+  const costoTasa_= (parseFloat(document.getElementById('costoTasa').value)  || 0) / 100;
+
+  const ivaIntPct_= (parseFloat(document.getElementById('ivaIntPct').value)  || 0) / 100;
+  const ivaRinPct_= (parseFloat(document.getElementById('ivaRinPct').value)  || 0) / 100;
+  const ibbbPct_  = (parseFloat(document.getElementById('ibbbPct').value)    || 0) / 100;
+  const dcPct_    = (parseFloat(document.getElementById('debCredPct').value) || 0) / 100;
+  const sellPct_  = (parseFloat(document.getElementById('sellosPct').value)  || 0) / 100;
+  const comPct_   = (parseFloat(document.getElementById('comisionPct').value)|| 0) / 100;
+
+  if (!liq || !venc || monto <= 0) return;
+
+  const dLiq  = new Date(liq  + 'T12:00:00');
+  const dVenc = new Date(venc + 'T12:00:00');
+
+  // Fecha de acreditación: T+0 = fecha de vencimiento, T+1/T+2 = días hábiles desde vencimiento
+  const dAcred = tAcred === 0 ? new Date(dVenc) : addBizDays(venc, tAcred);
+  // Plazo de descuento: entre fecha de liquidación y fecha de acreditación
+  const plazo = Math.round((dAcred - dLiq) / 86400000);
+  // Plazo del cheque (liq→venc): usado para comisiones Sobre TNA, independiente del T+
+  const plazoVenc = Math.round((dVenc - dLiq) / 86400000);
+
+  const fechaStr = fmtD(dAcred);
+  document.getElementById('fechaAcredChip').textContent = fechaStr;
+  document.getElementById('plazoChip').textContent = plazo;
+  document.getElementById('rFABco').textContent = fechaStr;
+
+  // ===== BALANZ =====
+  // Precio descontado: monto / (1 + tasa_diaria * plazo)
+  // tasa_diaria = tasa_anual / 365
+  const precioDesc = monto / (1 + tasaB_ * plazo / 365);
+
+  let costos = 0;
+  if (costoTipo === 'directo') {
+    costos = monto * costoTasa_;
+  } else {
+    costos = monto * costoTasa_ * (plazoVenc / 365);
+  }
+
+  const ivaCostos = costos * 0.21;
+  // Derecho de Mercado: =((PrecioDescontado*0,06%)/90)*MIN(Plazo,90)
+  const dm     = ((precioDesc * 0.0006) / 90) * Math.min(plazo, 90);
+  const ivaDMv = dm * 0.21;
+
+  const netoB = precioDesc - costos - ivaCostos - dm - ivaDMv;
+
+  // ===== BANCO =====
+  const intereses = monto * tasaBco_ * (plazo / 365);
+  const ivaInt    = intereses * ivaIntPct_;
+  const ivaRin    = intereses * ivaRinPct_;
+  const ibbb      = intereses * ibbbPct_;
+  const dc        = (monto - intereses - ivaInt) * dcPct_;
+  // Imp. de Sellos: =Plazo * pct / 365 * monto
+  const sellos    = plazo * sellPct_ * monto / 365;
+  const comision  = comTipo === 'tna'
+    ? monto * comPct_ * (plazoVenc / 365)
+    : monto * comPct_;
+
+  const netoBco = monto - intereses - ivaInt - ivaRin - ibbb - dc - sellos - comision;
+
+  // --- DOM Balanz ---
+  document.getElementById('rPlazoB').textContent   = plazo + ' días';
+  document.getElementById('rPrecioB').textContent  = fmt(precioDesc);
+  document.getElementById('rCostosB').textContent  = '−' + fmt(costos);
+  document.getElementById('rIvaB').textContent     = '−' + fmt(ivaCostos);
+  document.getElementById('rDM').textContent       = '−' + fmt(dm);
+  document.getElementById('rIvaDM').textContent    = '−' + fmt(ivaDMv);
+  document.getElementById('netoB').textContent     = fmtNeto(netoB);
+
+  // --- DOM Banco ---
+  document.getElementById('rPlazoBco').textContent = plazo + ' días';
+  document.getElementById('rInt').textContent      = '−' + fmt(intereses);
+  document.getElementById('rIvaInt').textContent   = '−' + fmt(ivaInt);
+  document.getElementById('rIvaRin').textContent   = '−' + fmt(ivaRin);
+  document.getElementById('rIbbb').textContent     = '−' + fmt(ibbb);
+  document.getElementById('rDC').textContent       = '−' + fmt(dc);
+  document.getElementById('rSellos').textContent   = sellos   > 0 ? '−' + fmt(sellos)   : '$0';
+  document.getElementById('rCom').textContent      = comision > 0 ? '−' + fmt(comision) : '$0';
+  document.getElementById('netoBco').textContent   = fmtNeto(netoBco);
+
+  // --- Verdict ---
+  const diff = Math.abs(netoB - netoBco);
+  const vEl   = document.getElementById('verdict');
+  const vIc   = document.getElementById('vIcon');
+  const vTx   = document.getElementById('vText');
+  const wbB_  = document.getElementById('wbB');
+  const wbBco_= document.getElementById('wbBco');
+  const cB_   = document.getElementById('cardB');
+  const cBco_ = document.getElementById('cardBco');
+
+  wbB_.style.display='none'; wbBco_.style.display='none';
+  cB_.classList.remove('winner'); cBco_.classList.remove('winner');
+  vEl.className = 'verdict';
+
+  if (netoB > netoBco) {
+    vEl.classList.add('bw'); vIc.textContent = '🏆';
+    vTx.innerHTML = 'Conviene el descuento en <strong>Mercado de Capitales (Balanz)</strong><small>Diferencia a favor: ' + fmt(diff) + ' (' + ((diff/netoBco)*100).toFixed(2) + '% más)</small>';
+    wbB_.style.display='inline-flex'; cB_.classList.add('winner');
+  } else if (netoBco > netoB) {
+    vEl.classList.add('bcw'); vIc.textContent = '🏦';
+    vTx.innerHTML = 'Conviene el <strong>Descuento Bancario</strong><small>Diferencia a favor: ' + fmt(diff) + ' (' + ((diff/netoB)*100).toFixed(2) + '% más)</small>';
+    wbBco_.style.display='inline-flex'; cBco_.classList.add('winner');
+  } else {
+    vEl.classList.add('tie'); vIc.textContent = '⚖️';
+    vTx.innerHTML = 'Las opciones son equivalentes<small>Resultado neto idéntico en ambas alternativas</small>';
+  }
+}
+
+document.querySelectorAll('input[type=number], input[type=date]').forEach(el => el.addEventListener('input', calcular));
+function parseMonto() {
+  return parseFloat(document.getElementById('monto').value.replace(/\./g,'').replace(',','.')) || 0;
+}
+const montoInput = document.getElementById('monto');
+montoInput.addEventListener('input', function() {
+  const pos=this.selectionStart;
+  const raw=this.value.replace(/\./g,'').replace(/\D/g,'');
+  if(!raw){this.value='';calcular();return;}
+  const formatted=parseInt(raw,10).toLocaleString('es-AR',{useGrouping:true,maximumFractionDigits:0});
+  const diff=formatted.length-this.value.length;
+  this.value=formatted;
+  try{this.setSelectionRange(pos+diff,pos+diff);}catch(e){}
+  calcular();
+});
+calcular();
+</script>
+
+<div class="tab-pane" id="tab-lote">
+<div class="main">
+
+<!-- Config lote -->
+<div class="lote-config">
+  <div class="panel-title"><span class="dot dot-b"></span>Configuración del Lote</div>
+  <div class="ig-3" style="margin-bottom:1.25rem">
+    <div class="field">
+      <label>Cantidad de cheques</label>
+      <div class="qty-ctrl" style="margin-top:0.1rem">
+        <button class="qty-btn" onclick="setQty(-1)">−</button>
+        <span class="qty-val" id="qtyVal">1</span>
+        <button class="qty-btn" onclick="setQty(1)">+</button>
+      </div>
+    </div>
+    <div class="field">
+      <label>Fecha de Cobro</label>
+      <div class="tg" id="ltgAcred" style="margin-bottom:0.5rem">
+        <button class="ab" data-v="0" onclick="setLT(0)">T+0</button>
+        <button            data-v="1" onclick="setLT(1)">T+1</button>
+        <button            data-v="2" onclick="setLT(2)">T+2</button>
+      </div>
+    </div>
+    <div class="field">
+      <label>Comisión del Asesor</label>
+      <div class="tg" id="ltgCosto" style="margin-bottom:0.5rem">
+        <button class="ab" data-v="tna"     onclick="setLCosto('tna')">Sobre TNA</button>
+        <button            data-v="directo" onclick="setLCosto('directo')">Directo</button>
+      </div>
+      <div style="display:flex;align-items:center;gap:0.5rem">
+        <span id="lCostoLbl" style="font-size:0.72rem;color:var(--muted);font-weight:600">% TNA:</span>
+        <input class="pct" type="number" id="lCostoTasa" value="0" step="0.1" min="0" style="width:90px" oninput="calcLote()">
+        <span style="font-size:0.72rem;color:var(--muted)">%</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Filas de cheques -->
+<div class="lote-cheques-wrap" id="loteRows"></div>
+
+<!-- Resumen -->
+<div class="lote-resumen" id="loteResumen" style="display:none">
+  <div class="lote-header">
+    <span class="badge badge-b">Balanz</span>
+    <span class="badge-sub">Mercado de capitales</span>
+    <span style="margin-left:auto;font-family:'DM Mono',monospace;font-size:0.75rem;color:var(--muted)" id="loteQtyLabel"></span>
+  </div>
+  <p class="lote-neto-lbl">Neto total acreditado</p>
+  <p class="lote-neto-val" id="lNetoTotal">—</p>
+
+  <div class="lote-grid">
+    <div>
+      <p style="font-size:0.7rem;font-weight:600;color:var(--muted);letter-spacing:0.5px;text-transform:uppercase;margin-bottom:0.5rem">Totales del lote</p>
+      <div class="drows">
+        <div class="dr"><span class="dl">Monto total cheques</span><span class="dv" id="lMontoTotal">—</span></div>
+        <div class="dr"><span class="dl">Precio descontado total</span><span class="dv" id="lPrecioTotal">—</span></div>
+        <div class="dr"><span class="dl">Comisión del asesor</span><span class="dv neg" id="lCostosTotal">—</span></div>
+        <div class="dr"><span class="dl">IVA (Comisión)</span><span class="dv neg" id="lIvaTotal">—</span></div>
+        <div class="dr"><span class="dl">Derecho de Mercado</span><span class="dv neg" id="lDMTotal">—</span></div>
+        <div class="dr"><span class="dl">IVA (Derecho de Mercado)</span><span class="dv neg" id="lIvaDMTotal">—</span></div>
+      </div>
+    </div>
+    <div>
+      <p style="font-size:0.7rem;font-weight:600;color:var(--muted);letter-spacing:0.5px;text-transform:uppercase;margin-bottom:0.5rem">Tasa efectiva del lote</p>
+      <div class="drows">
+        <div class="dr"><span class="dl">Tasa promedio ponderada</span><span class="dv" id="lTasaProm">—</span></div>
+        <div class="dr"><span class="dl">Plazo promedio ponderado</span><span class="dv" id="lPlazoProm">—</span></div>
+        <div class="dr"><span class="dl">Costo total / Monto</span><span class="dv neg" id="lCostoRate">—</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tabla por cheque -->
+  <div class="lote-conceptos">
+    <p style="font-size:0.7rem;font-weight:600;color:var(--muted);letter-spacing:0.5px;text-transform:uppercase;margin-bottom:0.5rem">Detalle por cheque</p>
+    <div style="overflow-x:auto">
+    <table class="lote-tabla">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Monto</th>
+          <th>Venc.</th>
+          <th>Plazo</th>
+          <th>Tasa</th>
+          <th>Precio Desc.</th>
+          <th>Comisión</th>
+          <th>IVA Com.</th>
+          <th>Der. Mercado</th>
+          <th>IVA D.M.</th>
+          <th>Neto</th>
+        </tr>
+      </thead>
+      <tbody id="loteTbody"></tbody>
+    </table>
+    </div>
+  </div>
+</div>
+
+</div><!-- .main lote -->
+</div><!-- tab-lote -->
+
+
+<script>
+// ===== TAB SWITCHING =====
+function switchTab(name) {
+  document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  document.querySelectorAll('.tab-btn').forEach(b => {
+    if (b.getAttribute('onclick') === "switchTab('" + name + "')") b.classList.add('active');
+  });
+  const subs = { comparacion: 'Mercado de Capitales (Balanz) vs. Descuento Bancario', lote: 'Análisis de Lote — Mercado de Capitales Balanz', comparalote: 'Comparación de Lote — Balanz vs. Descuento Bancario' };
+  document.getElementById('headerSub').textContent = subs[name];
+}
+
+// ===== LOTE =====
+let lQty = 1, lTacred = 0, lCostoTipo = 'tna';
+
+function setLT(v) {
+  lTacred = v;
+  document.querySelectorAll('#ltgAcred button').forEach(b => b.className = b.dataset.v==v ? 'ab' : '');
+  calcLote();
+}
+function setLCosto(t) {
+  lCostoTipo = t;
+  document.querySelectorAll('#ltgCosto button').forEach(b => b.className = b.dataset.v==t ? 'ab' : '');
+  document.getElementById('lCostoLbl').textContent = t === 'directo' ? '% directo:' : '% TNA:';
+  calcLote();
+}
+
+function addBizDaysL(dateStr, n) {
+  const d = new Date(dateStr + 'T12:00:00');
+  let a = 0;
+  while (a < n) { d.setDate(d.getDate()+1); if(d.getDay()!==0&&d.getDay()!==6) a++; }
+  return d;
+}
+function fmtDL(d) {
+  return d.toLocaleDateString('es-AR', {day:'2-digit', month:'2-digit', year:'numeric'});
+}
+const fmtL = n => '$' + Math.round(n).toLocaleString('es-AR');
+const fmtNetoL = n => '$' + (Math.round(n*100)/100).toLocaleString('es-AR',{minimumFractionDigits:2,maximumFractionDigits:2});
+const fmtP = n => n.toFixed(2) + '%';
+
+function setQty(delta) {
+  lQty = Math.max(1, Math.min(20, lQty + delta));
+  document.getElementById('qtyVal').textContent = lQty;
+  renderRows();
+}
+
+function lFmtInput(el) {
+  const pos=el.selectionStart;
+  const raw=el.value.replace(/\./g,'').replace(/\D/g,'');
+  if(!raw){el.value='';return;}
+  const fmt=parseInt(raw,10).toLocaleString('es-AR',{useGrouping:true,maximumFractionDigits:0});
+  const diff=fmt.length-el.value.length;
+  el.value=fmt;
+  try{el.setSelectionRange(pos+diff,pos+diff);}catch(e){}
+}
+function renderRows() {
+  const wrap = document.getElementById('loteRows');
+  // preserve existing values
+  const old = [];
+  wrap.querySelectorAll('.cheque-row').forEach((row, i) => {
+    old[i] = {
+      monto: row.querySelector('.l-monto').value.replace(/\./g,'').replace(',','.'),  // raw
+      liq:   row.querySelector('.l-liq').value,
+      venc:  row.querySelector('.l-venc').value,
+      tasa:  row.querySelector('.l-tasa').value,
+    };
+  });
+  wrap.innerHTML = '';
+  // header row labels
+  const labels = ['#', 'Monto ($)', 'Fecha de Negociación', 'Fecha Vencimiento', 'Tasa (% TNA)', 'Fecha de Cobro'];
+  // build header once
+  const hdr = document.createElement('div');
+  hdr.style.cssText = 'display:grid;grid-template-columns:28px 1fr 1fr 1fr 1fr 1fr;gap:0.75rem;padding:0 1.25rem;margin-bottom:0.25rem';
+  labels.forEach(l => {
+    const s = document.createElement('span');
+    s.style.cssText = 'font-size:0.67rem;font-weight:700;letter-spacing:0.8px;text-transform:uppercase;color:var(--muted)';
+    s.textContent = l;
+    hdr.appendChild(s);
+  });
+  wrap.appendChild(hdr);
+
+  for (let i = 0; i < lQty; i++) {
+    const row = document.createElement('div');
+    row.className = 'cheque-row';
+    const prev = old[i] || {};
+    const today = new Date().toISOString().slice(0,10);
+    row.innerHTML = `
+      <span class="cheque-num">${String(i+1).padStart(2,'0')}</span>
+      <div class="field"><input class="l-monto" type="text" value="${prev.monto?parseInt(prev.monto).toLocaleString('es-AR'):''}" inputmode="numeric" autocomplete="off" placeholder="0" oninput="lFmtInput(this);calcLote()"></div>
+      <div class="field"><input class="l-liq" type="date" value="${prev.liq||''}" oninput="calcLote()"></div>
+      <div class="field"><input class="l-venc" type="date" value="${prev.venc||''}" oninput="calcLote()"></div>
+      <div class="field"><input class="l-tasa" type="number" value="${prev.tasa||'0'}" min="0" step="0.1" placeholder="0" oninput="calcLote()"></div>
+      <div class="field"><span class="acred-chip l-acred-chip" style="display:block;line-height:1;padding-bottom:0.55rem">—</span></div>
+    `;
+    wrap.appendChild(row);
+  }
+  calcLote();
+}
+
+function calcLote() {
+  const rows = document.getElementById('loteRows').querySelectorAll('.cheque-row');
+  const costoTasa = (parseFloat(document.getElementById('lCostoTasa').value)||0)/100;
+
+  let totMonto=0, totPrecio=0, totCostos=0, totIva=0, totDM=0, totIvaDM=0, totNeto=0;
+  let wmPlazo=0, wmTasa=0;
+  const tbody = document.getElementById('loteTbody');
+  tbody.innerHTML = '';
+  let anyValid = false;
+
+  rows.forEach((row, i) => {
+    const monto  = parseFloat(row.querySelector('.l-monto').value.replace(/\./g,'').replace(',','.')) || 0;
+    const liq    = row.querySelector('.l-liq').value;
+    const venc   = row.querySelector('.l-venc').value;
+    const tasa   = (parseFloat(row.querySelector('.l-tasa').value)||0)/100;
+    const chip   = row.querySelector('.l-acred-chip');
+
+    if (!liq || !venc || monto <= 0) { chip.textContent = '—'; return; }
+
+    const dLiq  = new Date(liq  + 'T12:00:00');
+    const dVenc = new Date(venc + 'T12:00:00');
+    if (dVenc <= dLiq) { chip.textContent = 'Fecha inválida'; return; }
+
+    const dAcred    = lTacred === 0 ? new Date(dVenc) : addBizDaysL(venc, lTacred);
+    const plazo     = Math.round((dAcred - dLiq) / 86400000);
+    const plazoVenc = Math.round((dVenc  - dLiq) / 86400000);
+    chip.textContent = fmtDL(dAcred);
+
+    const precioDesc = monto / (1 + tasa * plazo / 365);
+
+    let costos = 0;
+    if (lCostoTipo === 'directo') {
+      costos = monto * costoTasa;
+    } else {
+      costos = monto * costoTasa * (plazoVenc / 365);
+    }
+    const ivaC  = costos * 0.21;
+    const dm    = ((precioDesc * 0.0006) / 90) * Math.min(plazo, 90);
+    const ivaDM = dm * 0.21;
+    const neto  = precioDesc - costos - ivaC - dm - ivaDM;
+
+    totMonto  += monto;
+    totPrecio += precioDesc;
+    totCostos += costos;
+    totIva    += ivaC;
+    totDM     += dm;
+    totIvaDM  += ivaDM;
+    totNeto   += neto;
+    wmPlazo   += plazo * monto;
+    wmTasa    += tasa  * monto;
+    anyValid   = true;
+
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td class="td-label">${String(i+1).padStart(2,'0')}</td>
+      <td>${fmtL(monto)}</td>
+      <td style="color:var(--muted);font-size:0.72rem">${new Date(venc+'T12:00:00').toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit',year:'numeric'})}</td>
+      <td>${plazo}d</td>
+      <td>${fmtP(tasa*100)}</td>
+      <td>${fmtL(precioDesc)}</td>
+      <td class="td-neg">${costos>0?'−'+fmtL(costos):'$0'}</td>
+      <td class="td-neg">${ivaC>0?'−'+fmtL(ivaC):'$0'}</td>
+      <td class="td-neg">−${fmtL(dm)}</td>
+      <td class="td-neg">−${fmtL(ivaDM)}</td>
+      <td class="td-total">${fmtNetoL(neto)}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+
+  // total row in table
+  if (anyValid) {
+    const tr = document.createElement('tr');
+    tr.className = 'total-row';
+    tr.innerHTML = `
+      <td colspan="5" class="td-label">TOTAL LOTE</td>
+      <td>${fmtL(totPrecio)}</td>
+      <td class="td-neg">${totCostos>0?'−'+fmtL(totCostos):'$0'}</td>
+      <td class="td-neg">${totIva>0?'−'+fmtL(totIva):'$0'}</td>
+      <td class="td-neg">−${fmtL(totDM)}</td>
+      <td class="td-neg">−${fmtL(totIvaDM)}</td>
+      <td class="td-total">${fmtNetoL(totNeto)}</td>
+    `;
+    tbody.appendChild(tr);
+  }
+
+  const resumen = document.getElementById('loteResumen');
+  if (!anyValid) { resumen.style.display='none'; return; }
+  resumen.style.display='block';
+
+  document.getElementById('loteQtyLabel').textContent = lQty + (lQty===1?' cheque':' cheques');
+  document.getElementById('lNetoTotal').textContent  = fmtNetoL(totNeto);
+  document.getElementById('lMontoTotal').textContent = fmtL(totMonto);
+  document.getElementById('lPrecioTotal').textContent= fmtL(totPrecio);
+  document.getElementById('lCostosTotal').textContent= totCostos>0?'−'+fmtL(totCostos):'$0';
+  document.getElementById('lIvaTotal').textContent   = totIva>0?'−'+fmtL(totIva):'$0';
+  document.getElementById('lDMTotal').textContent    = '−'+fmtL(totDM);
+  document.getElementById('lIvaDMTotal').textContent = '−'+fmtL(totIvaDM);
+  document.getElementById('lTasaProm').textContent   = fmtP((wmTasa/totMonto)*100);
+  document.getElementById('lPlazoProm').textContent  = Math.round(wmPlazo/totMonto) + ' días';
+  const totalCostoAbs = totMonto - totNeto;
+  document.getElementById('lCostoRate').textContent  = fmtP((totalCostoAbs/totMonto)*100);
+}
+
+// init lote rows on load
+renderRows();
+</script>
+
+
+<div class="tab-pane" id="tab-comparalote">
+<div class="main">
+
+<!-- Solo cantidad arriba -->
+<div class="cl-top">
+  <div class="panel-title" style="margin:0">Configuración del Lote</div>
+  <div style="display:flex;align-items:center;gap:0.75rem">
+    <span style="font-size:0.75rem;font-weight:600;color:var(--muted)">Cantidad de cheques</span>
+    <div class="qty-ctrl">
+      <button class="qty-btn" onclick="clSetQty(-1)">−</button>
+      <span class="qty-val" id="clQtyVal">1</span>
+      <button class="qty-btn" onclick="clSetQty(1)">+</button>
+    </div>
+  </div>
+</div>
+
+<!-- Split inputs izq/der -->
+<div class="cl-split">
+
+  <!-- ══ BALANZ inputs ══ -->
+  <div class="cl-col col-b">
+    <div class="cl-col-title t-b"><span class="dot dot-b"></span>Balanz — Mercado de Capitales</div>
+    <div class="field">
+      <label>Fecha de Cobro</label>
+      <div class="tg" id="cltgAcredB">
+        <button class="ab" data-v="0" onclick="clSetTB(0)">T+0</button>
+        <button data-v="1" onclick="clSetTB(1)">T+1</button>
+        <button data-v="2" onclick="clSetTB(2)">T+2</button>
+      </div>
+    </div>
+    <div class="field">
+      <label>Comisión del Asesor</label>
+      <div class="tg" id="cltgCostoB" style="margin-bottom:0.5rem">
+        <button class="ab" data-v="tna" onclick="clSetCostoB('tna')">Sobre TNA</button>
+        <button data-v="directo" onclick="clSetCostoB('directo')">Directo</button>
+      </div>
+      <div style="display:flex;align-items:center;gap:0.5rem">
+        <span id="clCostoLblB" style="font-size:0.72rem;color:var(--muted);font-weight:600">% TNA:</span>
+        <input class="pct" type="number" id="clCostoTasaB" value="0" step="0.1" min="0" style="width:90px" oninput="calcComparaLote()">
+        <span style="font-size:0.72rem;color:var(--muted)">%</span>
+      </div>
+    </div>
+    <div id="clRowsB"></div>
+  </div>
+
+  <!-- ══ BANCO inputs ══ -->
+  <div class="cl-col col-bco">
+    <div class="cl-col-title t-bco"><span class="dot dot-bc"></span>Banco — Descuento Bancario</div>
+    <div class="field">
+      <label>Fecha de Cobro</label>
+      <div class="tg" id="cltgAcredBco">
+        <button class="ab" data-v="0" onclick="clSetTBco(0)">T+0</button>
+        <button data-v="1" onclick="clSetTBco(1)">T+1</button>
+        <button data-v="2" onclick="clSetTBco(2)">T+2</button>
+      </div>
+    </div>
+    <div style="display:table;width:100%;border-collapse:collapse">
+      <div style="display:table-row"><span style="display:table-cell;font-size:0.79rem;color:var(--muted);padding:0.28rem 0;border-bottom:1px solid var(--bg);vertical-align:middle">IVA sobre Intereses</span><span style="display:table-cell;width:85px;text-align:right;padding:0.28rem 0;border-bottom:1px solid var(--bg);vertical-align:middle"><span style="display:inline-flex;align-items:center;gap:3px"><input class="pct" type="number" id="clIvaInt" value="10.5" step="0.1" min="0" oninput="calcComparaLote()"><span style="font-size:0.72rem;color:var(--muted)">%</span></span></span></div>
+      <div style="display:table-row"><span style="display:table-cell;font-size:0.79rem;color:var(--muted);padding:0.28rem 0;border-bottom:1px solid var(--bg);vertical-align:middle">IVA RIN</span><span style="display:table-cell;width:85px;text-align:right;padding:0.28rem 0;border-bottom:1px solid var(--bg);vertical-align:middle"><span style="display:inline-flex;align-items:center;gap:3px"><input class="pct" type="number" id="clIvaRin" value="1.5" step="0.1" min="0" oninput="calcComparaLote()"><span style="font-size:0.72rem;color:var(--muted)">%</span></span></span></div>
+      <div style="display:table-row"><span style="display:table-cell;font-size:0.79rem;color:var(--muted);padding:0.28rem 0;border-bottom:1px solid var(--bg);vertical-align:middle">I.B.B.B.</span><span style="display:table-cell;width:85px;text-align:right;padding:0.28rem 0;border-bottom:1px solid var(--bg);vertical-align:middle"><span style="display:inline-flex;align-items:center;gap:3px"><input class="pct" type="number" id="clIbbb" value="1.75" step="0.05" min="0" oninput="calcComparaLote()"><span style="font-size:0.72rem;color:var(--muted)">%</span></span></span></div>
+      <div style="display:table-row"><span style="display:table-cell;font-size:0.79rem;color:var(--muted);padding:0.28rem 0;border-bottom:1px solid var(--bg);vertical-align:middle">Imp. Débito y Crédito</span><span style="display:table-cell;width:85px;text-align:right;padding:0.28rem 0;border-bottom:1px solid var(--bg);vertical-align:middle"><span style="display:inline-flex;align-items:center;gap:3px"><input class="pct" type="number" id="clDebCred" value="1.2" step="0.1" min="0" oninput="calcComparaLote()"><span style="font-size:0.72rem;color:var(--muted)">%</span></span></span></div>
+      <div style="display:table-row"><span style="display:table-cell;font-size:0.79rem;color:var(--muted);padding:0.28rem 0;border-bottom:1px solid var(--bg);vertical-align:middle">Imp. de Sellos</span><span style="display:table-cell;width:85px;text-align:right;padding:0.28rem 0;border-bottom:1px solid var(--bg);vertical-align:middle"><span style="display:inline-flex;align-items:center;gap:3px"><input class="pct" type="number" id="clSellos" value="0" step="0.1" min="0" oninput="calcComparaLote()"><span style="font-size:0.72rem;color:var(--muted)">%</span></span></span></div>
+    </div>
+    <div class="field">
+      <label>Comisión Bancaria</label>
+      <div class="tg" id="cltgComBco" style="margin-bottom:0.5rem">
+        <button class="abc" data-v="tna" onclick="clSetComBco('tna')">Sobre TNA</button>
+        <button data-v="directo" onclick="clSetComBco('directo')">Directo</button>
+      </div>
+      <div style="display:flex;align-items:center;gap:0.5rem">
+        <span id="clComLblBco" style="font-size:0.72rem;color:var(--muted);font-weight:600">% TNA:</span>
+        <input class="pct" type="number" id="clComBanco" value="0" step="0.1" min="0" style="width:90px" oninput="calcComparaLote()">
+        <span style="font-size:0.72rem;color:var(--muted)">%</span>
+      </div>
+    </div>
+    <div id="clRowsBco"></div>
+  </div>
+
+</div><!-- cl-split inputs -->
+
+<!-- Veredicto -->
+<div class="cl-verdict" id="clVerdict" style="display:none">
+  <div class="verdict-icon" id="clVIcon">⚖️</div>
+  <div id="clVText"></div>
+</div>
+
+<!-- Resumen lado a lado -->
+<div class="cl-resumen-wrap" id="clResumenWrap" style="display:none">
+
+  <!-- Card Balanz -->
+  <div class="cl-res-card b-card" id="clCardB">
+    <div class="rch">
+      <span class="badge badge-b">Balanz</span>
+      <span class="badge-sub">Mercado de capitales</span>
+      <span class="win-badge" id="clWbB" style="display:none">✓ Conviene</span>
+    </div>
+    <p class="cl-neto-lbl">Neto total acreditado</p>
+    <p class="cl-neto-val" id="clBNetoTot">—</p>
+    <div class="drows">
+      <div class="dr"><span class="dl">Monto total</span><span class="dv" id="clBMontoTot">—</span></div>
+      <div class="dr"><span class="dl">Precio descontado</span><span class="dv" id="clBPrecioTot">—</span></div>
+      <div class="dr"><span class="dl">Comisión asesor</span><span class="dv neg" id="clBCostoTot">—</span></div>
+      <div class="dr"><span class="dl">IVA Comisión</span><span class="dv neg" id="clBIvaTot">—</span></div>
+      <div class="dr"><span class="dl">Derecho de Mercado</span><span class="dv neg" id="clBDMTot">—</span></div>
+      <div class="dr"><span class="dl">IVA Der. Mercado</span><span class="dv neg" id="clBIvaDMTot">—</span></div>
+    </div>
+  </div>
+
+  <!-- Card Banco -->
+  <div class="cl-res-card bco-card" id="clCardBco">
+    <div class="rch">
+      <span class="badge badge-bc">Banco</span>
+      <span class="badge-sub">Descuento bancario</span>
+      <span class="win-badge" id="clWbBco" style="display:none">✓ Conviene</span>
+    </div>
+    <p class="cl-neto-lbl">Neto total acreditado</p>
+    <p class="cl-neto-val" id="clBcoNetoTot">—</p>
+    <div class="drows">
+      <div class="dr"><span class="dl">Monto total</span><span class="dv" id="clBcoMontoTot">—</span></div>
+      <div class="dr"><span class="dl">Intereses</span><span class="dv neg" id="clBcoIntTot">—</span></div>
+      <div class="dr"><span class="dl">IVA sobre Intereses</span><span class="dv neg" id="clBcoIvaIntTot">—</span></div>
+      <div class="dr"><span class="dl">IVA RIN</span><span class="dv neg" id="clBcoIvaRinTot">—</span></div>
+      <div class="dr"><span class="dl">I.B.B.B.</span><span class="dv neg" id="clBcoIbbbTot">—</span></div>
+      <div class="dr"><span class="dl">Imp. Débito y Crédito</span><span class="dv neg" id="clBcoDCTot">—</span></div>
+      <div class="dr"><span class="dl">Imp. de Sellos</span><span class="dv neg" id="clBcoSellosTot">—</span></div>
+      <div class="dr"><span class="dl">Comisión Bancaria</span><span class="dv neg" id="clBcoComTot">—</span></div>
+    </div>
+  </div>
+
+</div><!-- cl-resumen-wrap -->
+
+</div><!-- .main -->
+</div><!-- tab-comparalote -->
+
+
+<script>
+// ===== COMPARAR LOTE =====
+let clQty=1,clTacredB=0,clTacredBco=0,clCostoTipoB='tna',clComTipoBco='tna';
+
+function clSetQty(d){
+  clQty=Math.max(1,Math.min(20,clQty+d));
+  document.getElementById('clQtyVal').textContent=clQty;
+  clRenderRows();
+}
+function clSetTB(v){
+  clTacredB=v;
+  document.querySelectorAll('#cltgAcredB button').forEach(b=>b.className=b.dataset.v==v?'ab':'');
+  calcComparaLote();
+}
+function clSetTBco(v){
+  clTacredBco=v;
+  document.querySelectorAll('#cltgAcredBco button').forEach(b=>b.className=b.dataset.v==v?'ab':'');
+  calcComparaLote();
+}
+function clSetCostoB(t){
+  clCostoTipoB=t;
+  document.querySelectorAll('#cltgCostoB button').forEach(b=>b.className=b.dataset.v==t?'ab':'');
+  document.getElementById('clCostoLblB').textContent=t==='directo'?'% directo:':'% TNA:';
+  calcComparaLote();
+}
+function clSetComBco(t){
+  clComTipoBco=t;
+  document.querySelectorAll('#cltgComBco button').forEach(b=>b.className=b.dataset.v==t?'abc':'');
+  document.getElementById('clComLblBco').textContent=t==='directo'?'% directo:':'% TNA:';
+  calcComparaLote();
+}
+function clAddBizDays(dateStr,n){
+  const d=new Date(dateStr+'T12:00:00');let a=0;
+  while(a<n){d.setDate(d.getDate()+1);if(d.getDay()!==0&&d.getDay()!==6)a++;}
+  return d;
+}
+const clFmt  = n=>'$'+Math.round(n).toLocaleString('es-AR');
+const clFmtN = n=>'$'+(Math.round(n*100)/100).toLocaleString('es-AR',{minimumFractionDigits:2,maximumFractionDigits:2});
+
+function clFmtInput(el){
+  const pos=el.selectionStart;
+  const raw=el.value.replace(/\./g,'').replace(/\D/g,'');
+  if(!raw){el.value='';return;}
+  const fmt=parseInt(raw,10).toLocaleString('es-AR',{useGrouping:true,maximumFractionDigits:0});
+  const diff=fmt.length-el.value.length;
+  el.value=fmt;
+  try{el.setSelectionRange(pos+diff,pos+diff);}catch(e){}
+}
+function clParse(val){return parseFloat((val||'').replace(/\./g,'').replace(',','.'))||0;}
+
+function clMkHeader(parent){
+  const h=document.createElement('div');
+  h.style.cssText='display:grid;grid-template-columns:18px 1fr 1fr;gap:0.5rem;padding:0 0.1rem;margin-bottom:0.1rem';
+  ['#','Fecha Neg.','Fecha Venc.'].forEach(l=>{
+    const s=document.createElement('span');
+    s.style.cssText='font-size:0.62rem;font-weight:700;letter-spacing:0.8px;text-transform:uppercase;color:var(--muted)';
+    s.textContent=l;h.appendChild(s);
+  });
+  const h2=document.createElement('div');
+  h2.style.cssText='display:grid;grid-template-columns:18px 1fr 1fr;gap:0.5rem;padding:0 0.1rem;margin-bottom:0.35rem';
+  ['','Monto ($)','Tasa TNA'].forEach(l=>{
+    const s=document.createElement('span');
+    s.style.cssText='font-size:0.62rem;font-weight:700;letter-spacing:0.8px;text-transform:uppercase;color:var(--muted)';
+    s.textContent=l;h2.appendChild(s);
+  });
+  parent.appendChild(h);parent.appendChild(h2);
+}
+
+function clRenderRows(){
+  const wB=document.getElementById('clRowsB'),wBco=document.getElementById('clRowsBco');
+  const oldB=[],oldBco=[];
+  wB.querySelectorAll('.cl-row').forEach((r,i)=>oldB[i]={
+    monto:clParse(r.querySelector('.cl-monto-b').value),
+    liq:r.querySelector('.cl-liq-b').value,
+    venc:r.querySelector('.cl-venc-b').value,
+    tasa:r.querySelector('.cl-tasa-b').value,
+  });
+  wBco.querySelectorAll('.cl-row').forEach((r,i)=>oldBco[i]={
+    monto:clParse(r.querySelector('.cl-monto-bco').value),
+    liq:r.querySelector('.cl-liq-bco').value,
+    venc:r.querySelector('.cl-venc-bco').value,
+    tasa:r.querySelector('.cl-tasa-bco').value,
+  });
+  wB.innerHTML='';wBco.innerHTML='';
+  clMkHeader(wB);clMkHeader(wBco);
+
+  for(let i=0;i<clQty;i++){
+    const pb=oldB[i]||{},pbco=oldBco[i]||{};
+    const num=String(i+1).padStart(2,'0');
+    const mBf =pb.monto ?parseInt(pb.monto).toLocaleString('es-AR',{useGrouping:true,maximumFractionDigits:0}):'';
+    const mBcof=pbco.monto?parseInt(pbco.monto).toLocaleString('es-AR',{useGrouping:true,maximumFractionDigits:0}):'';
+
+    const rB=document.createElement('div');rB.className='cl-row';
+    rB.innerHTML=`
+      <div class="cl-row-line" style="grid-template-columns:18px 1fr 1fr">
+        <span class="cl-row-num">${num}</span>
+        <div class="field"><input class="cl-liq-b" type="date" value="${pb.liq||''}" oninput="calcComparaLote()"></div>
+        <div class="field"><input class="cl-venc-b" type="date" value="${pb.venc||''}" oninput="calcComparaLote()"></div>
+      </div>
+      <div class="cl-row-line" style="grid-template-columns:18px 1fr 1fr">
+        <span></span>
+        <div class="field"><input class="cl-monto-b" type="text" value="${mBf}" inputmode="numeric" autocomplete="off" placeholder="0" oninput="clFmtInput(this);calcComparaLote()"></div>
+        <div class="field"><input class="cl-tasa-b" type="number" value="${pb.tasa||'0'}" min="0" step="0.1" placeholder="0" oninput="calcComparaLote()"></div>
+      </div>`;
+    wB.appendChild(rB);
+
+    const rBco=document.createElement('div');rBco.className='cl-row';
+    rBco.innerHTML=`
+      <div class="cl-row-line" style="grid-template-columns:18px 1fr 1fr">
+        <span class="cl-row-num">${num}</span>
+        <div class="field"><input class="cl-liq-bco" type="date" value="${pbco.liq||''}" oninput="calcComparaLote()"></div>
+        <div class="field"><input class="cl-venc-bco" type="date" value="${pbco.venc||''}" oninput="calcComparaLote()"></div>
+      </div>
+      <div class="cl-row-line" style="grid-template-columns:18px 1fr 1fr">
+        <span></span>
+        <div class="field"><input class="cl-monto-bco" type="text" value="${mBcof}" inputmode="numeric" autocomplete="off" placeholder="0" oninput="clFmtInput(this);calcComparaLote()"></div>
+        <div class="field"><input class="cl-tasa-bco" type="number" value="${pbco.tasa||'0'}" min="0" step="0.1" placeholder="0" oninput="calcComparaLote()"></div>
+      </div>`;
+    wBco.appendChild(rBco);
+  }
+  calcComparaLote();
+}
+
+function calcComparaLote(){
+  const costoTasaB =(parseFloat(document.getElementById('clCostoTasaB').value)||0)/100;
+  const ivaIntPct  =(parseFloat(document.getElementById('clIvaInt').value)||0)/100;
+  const ivaRinPct  =(parseFloat(document.getElementById('clIvaRin').value)||0)/100;
+  const ibbbPct    =(parseFloat(document.getElementById('clIbbb').value)||0)/100;
+  const dcPct      =(parseFloat(document.getElementById('clDebCred').value)||0)/100;
+  const sellPct    =(parseFloat(document.getElementById('clSellos').value)||0)/100;
+  const comBancoPct=(parseFloat(document.getElementById('clComBanco').value)||0)/100;
+
+  let bMonto=0,bPrecio=0,bCostos=0,bIva=0,bDM=0,bIvaDM=0,bNeto=0,anyB=false;
+  document.getElementById('clRowsB').querySelectorAll('.cl-row').forEach(row=>{
+    const monto=clParse(row.querySelector('.cl-monto-b').value);
+    const liq=row.querySelector('.cl-liq-b').value;
+    const venc=row.querySelector('.cl-venc-b').value;
+    const tasa=(parseFloat(row.querySelector('.cl-tasa-b').value)||0)/100;
+    if(!liq||!venc||monto<=0)return;
+    const dLiq=new Date(liq+'T12:00:00'),dVenc=new Date(venc+'T12:00:00');
+    if(dVenc<=dLiq)return;
+    const dAcred=clTacredB===0?new Date(dVenc):clAddBizDays(venc,clTacredB);
+    const plazo=Math.round((dAcred-dLiq)/86400000);
+    const plazoVenc=Math.round((dVenc-dLiq)/86400000);
+    const precio=monto/(1+tasa*plazo/365);
+    const costos=clCostoTipoB==='directo'?monto*costoTasaB:monto*costoTasaB*(plazoVenc/365);
+    const ivaC=costos*0.21;
+    const dm=((precio*0.0006)/90)*Math.min(plazo,90);
+    const ivaDM=dm*0.21;
+    bMonto+=monto;bPrecio+=precio;bCostos+=costos;bIva+=ivaC;bDM+=dm;bIvaDM+=ivaDM;
+    bNeto+=precio-costos-ivaC-dm-ivaDM;anyB=true;
+  });
+
+  let bcMonto=0,bcInt=0,bcIvaInt=0,bcIvaRin=0,bcIbbb=0,bcDC=0,bcSellos=0,bcCom=0,bcNeto=0,anyBco=false;
+  document.getElementById('clRowsBco').querySelectorAll('.cl-row').forEach(row=>{
+    const monto=clParse(row.querySelector('.cl-monto-bco').value);
+    const liq=row.querySelector('.cl-liq-bco').value;
+    const venc=row.querySelector('.cl-venc-bco').value;
+    const tasa=(parseFloat(row.querySelector('.cl-tasa-bco').value)||0)/100;
+    if(!liq||!venc||monto<=0)return;
+    const dLiq=new Date(liq+'T12:00:00'),dVenc=new Date(venc+'T12:00:00');
+    if(dVenc<=dLiq)return;
+    const dAcred=clTacredBco===0?new Date(dVenc):clAddBizDays(venc,clTacredBco);
+    const plazo=Math.round((dAcred-dLiq)/86400000);
+    const plazoVenc=Math.round((dVenc-dLiq)/86400000);
+    const intereses=monto*tasa*(plazo/365);
+    const ivaInt=intereses*ivaIntPct;
+    const ivaRin=intereses*ivaRinPct;
+    const ibbb=intereses*ibbbPct;
+    const dc=(monto-intereses-ivaInt)*dcPct;
+    const sellos=plazo*sellPct*monto/365;
+    const comision=clComTipoBco==='tna'?monto*comBancoPct*(plazoVenc/365):monto*comBancoPct;
+    bcMonto+=monto;bcInt+=intereses;bcIvaInt+=ivaInt;bcIvaRin+=ivaRin;
+    bcIbbb+=ibbb;bcDC+=dc;bcSellos+=sellos;bcCom+=comision;
+    bcNeto+=monto-intereses-ivaInt-ivaRin-ibbb-dc-sellos-comision;anyBco=true;
+  });
+
+  const resWrap=document.getElementById('clResumenWrap');
+  const verdEl=document.getElementById('clVerdict');
+
+  if(!anyB&&!anyBco){resWrap.style.display='none';verdEl.style.display='none';return;}
+  resWrap.style.display='grid';
+
+  if(anyB){
+    document.getElementById('clBNetoTot').textContent  =clFmtN(bNeto);
+    document.getElementById('clBMontoTot').textContent =clFmt(bMonto);
+    document.getElementById('clBPrecioTot').textContent=clFmt(bPrecio);
+    document.getElementById('clBCostoTot').textContent =bCostos>0?'−'+clFmt(bCostos):'$0';
+    document.getElementById('clBIvaTot').textContent   =bIva>0?'−'+clFmt(bIva):'$0';
+    document.getElementById('clBDMTot').textContent    ='−'+clFmt(bDM);
+    document.getElementById('clBIvaDMTot').textContent ='−'+clFmt(bIvaDM);
+  }
+  if(anyBco){
+    document.getElementById('clBcoNetoTot').textContent  =clFmtN(bcNeto);
+    document.getElementById('clBcoMontoTot').textContent =clFmt(bcMonto);
+    document.getElementById('clBcoIntTot').textContent   ='−'+clFmt(bcInt);
+    document.getElementById('clBcoIvaIntTot').textContent='−'+clFmt(bcIvaInt);
+    document.getElementById('clBcoIvaRinTot').textContent='−'+clFmt(bcIvaRin);
+    document.getElementById('clBcoIbbbTot').textContent  ='−'+clFmt(bcIbbb);
+    document.getElementById('clBcoDCTot').textContent    ='−'+clFmt(bcDC);
+    document.getElementById('clBcoSellosTot').textContent=bcSellos>0?'−'+clFmt(bcSellos):'$0';
+    document.getElementById('clBcoComTot').textContent   =bcCom>0?'−'+clFmt(bcCom):'$0';
+  }
+
+  // Veredicto
+  if(!anyB||!anyBco){verdEl.style.display='none';return;}
+  verdEl.style.display='flex';verdEl.className='cl-verdict';
+  const wbB=document.getElementById('clWbB'),wbBco=document.getElementById('clWbBco');
+  const cB=document.getElementById('clCardB'),cBco=document.getElementById('clCardBco');
+  wbB.style.display='none';wbBco.style.display='none';
+  cB.classList.remove('winner');cBco.classList.remove('winner');
+  const diff=Math.abs(bNeto-bcNeto);
+  const vIc=document.getElementById('clVIcon'),vTx=document.getElementById('clVText');
+  if(bNeto>bcNeto){
+    verdEl.classList.add('bw');vIc.textContent='🏆';
+    vTx.innerHTML='Conviene el descuento en <strong>Mercado de Capitales (Balanz)</strong><small>Diferencia a favor: '+clFmt(diff)+' ('+((diff/bcNeto)*100).toFixed(2)+'% más)</small>';
+    wbB.style.display='inline-flex';cB.classList.add('winner');
+  } else if(bcNeto>bNeto){
+    verdEl.classList.add('bcw');vIc.textContent='🏦';
+    vTx.innerHTML='Conviene el <strong>Descuento Bancario</strong><small>Diferencia a favor: '+clFmt(diff)+' ('+((diff/bNeto)*100).toFixed(2)+'% más)</small>';
+    wbBco.style.display='inline-flex';cBco.classList.add('winner');
+  } else {
+    verdEl.classList.add('tie');vIc.textContent='⚖️';
+    vTx.innerHTML='Las opciones son equivalentes<small>Resultado neto idéntico en ambas alternativas</small>';
+  }
+}
+
+clRenderRows();
+</script>
+
+</body>
+</html>
